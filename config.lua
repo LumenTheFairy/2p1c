@@ -22,9 +22,5 @@ config.hostname = "localhost"
 --that the players must wait to recieve the other's input. If this is too high,
 --there will be noticable input delay.
 config.latency = 4
---Setting the game will load game specific scripts. Currently the only script
---the superstarsaga input modifier script. Set blank this as nil or comment
---the line out to not load any game specific scripts.
-config.game = "superstarsaga"
 
 return config

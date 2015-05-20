@@ -1,6 +1,6 @@
 --author: TestRunner
 local keymap = {}
-local keylist = {"Up", "Down", "Left", "Right", "A", "B", "X", "Y", "L", "R", "Start", "Select"}
+local keylist = {"Up", "Down", "Left", "Right", "A", "B", "L", "R", "Start", "Select"}
 
 function getKey(t)
 	local key = nil
@@ -57,7 +57,7 @@ for k, v in pairs(keymap) do
 	else
 		f:write(",")
 	end
-	f:write("  [\"", k ,"\"] = \"", v, "\"\n")
+	f:write("  ", k ," = \"", v, "\"\n")
 end
 f:write("}\n\nreturn keymap")
 
