@@ -15,7 +15,7 @@
 --          255 = Combat Explanation
 --          102 = Paused
 --
-function modifyInputs(myInput, theirInput, playernum)
+return function modifyInputs(myInput, theirInput, playernum)
   local mario_input = myInput
   local luigi_input = theirInput
 

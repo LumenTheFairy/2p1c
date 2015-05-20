@@ -36,4 +36,4 @@ event.onexit(function()
 end)
 
 sync.synctoframe1()
-sync.syncallinput(client_socket)
+sync.syncallinput(client_socket, 1)
