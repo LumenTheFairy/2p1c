@@ -8,7 +8,7 @@ config.accept_timeout = 5
 --for the other player's input. If this timeout is reached, the connection
 --will end, so a low timeout may ruin syncing if one player pauses emulation,
 --has a slowdown in emulation, or has a slowdown in connection speed.
-config.input_timeout = 3
+config.input_timeout = 5
 --This is the port the connection will happen over. Make sure this is the same
 --for both players before trying to sync.
 config.port = 54321
@@ -22,9 +22,13 @@ config.hostname = "localhost"
 --that the players must wait to recieve the other's input. If this is too high,
 --there will be noticable input delay.
 config.latency = 4
---Setting the game will load game specific scripts. Currently the only script
---the superstarsaga input modifier script. Set blank this as nil or comment
---the line out to not load any game specific scripts.
-config.game = "superstarsaga"
+--This is the file name (without the .lua extension) of the lua script that
+--contains the input modifier you wish to use. If you do not wish to run any
+--input modification, set this to "inputmodifier_none".
+config.input_modifier = "inputmodifier_leftandright"
+--This is the file name (without the .lua extension) of the lua script that
+--contains the input display code wish to use. If you do not wish to display
+--input, set this to "inputdisplay_none".
+config.input_display = "inputdisplay_snes"
 
 return config

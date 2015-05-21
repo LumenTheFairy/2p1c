@@ -15,6 +15,7 @@
 --          255 = Combat Explanation
 --          102 = Paused
 --
+--author: testrunner
 return function(myInput, theirInput, playernum)
   local mario_input = myInput
   local luigi_input = theirInput
