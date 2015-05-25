@@ -13,6 +13,7 @@ server:settimeout(config.accept_timeout)
 --wait for the connection from the client
 console.log("Awaiting connection.")
 emu.frameadvance()
+emu.frameadvance()
 local client_socket, err = server:accept()
 
 --end execution if a client does not connect in time
@@ -26,6 +27,7 @@ end
 local peername, peerport = client_socket:getpeername()
 console.log("Connected to " .. peername .. " on port " .. peerport)
 emu.frameadvance()
+emu.frameadvance()
 
 -- make sure we don't block forever waiting for input
 client_socket:settimeout(config.input_timeout)
@@ -38,5 +40,6 @@ event.onexit(function()
 end)
 
 --sync the gameplay
+sync.syncconfig(client_socket, 1)
 sync.synctoframe1()
 sync.syncallinput(client_socket)

@@ -9,6 +9,7 @@ local client_socket = assert(socket.connect(config.hostname, config.port))
 local peername, peerport = client_socket:getpeername()
 console.log("Connected to " .. peername .. " on port " .. peerport)
 emu.frameadvance()
+emu.frameadvance()
 
 --make sure we don't block waiting for a response
 client_socket:settimeout(config.input_timeout)
@@ -20,5 +21,6 @@ event.onexit(function()
 end)
 
 --sync the gameplay
+sync.syncconfig(client_socket, 2)
 sync.synctoframe1()
 sync.syncallinput(client_socket)

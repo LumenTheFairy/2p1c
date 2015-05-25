@@ -5,10 +5,12 @@ controller = require("controller")
 
 --list of message types
 messenger.INPUT = 0
+messenger.CONFIG = 1
 
 --the first character of the message tells what kind of message was sent
 local message_type_to_char = {
-  [messenger.INPUT] = "i"
+  [messenger.INPUT] = "i",
+  [messenger.CONFIG] = "c"
 }
 --inverse of the previous table
 local char_to_message_type = {}
@@ -37,6 +39,20 @@ local encode_message = {
     end
     message = message .. "," .. frame
     return message
+  end,
+  --a config message expects 4 arguments:
+  --the player number,
+  --the latency frames,
+  --the hash of the input modifier file,
+  --and the hash of the code used in gameplay sync
+  [messenger.CONFIG] = function(data)
+    local player_num = data[1]
+    local latency = data[2]
+    local modifier_hash = data[3]
+    local sync_hash = data[4]
+    local message = player_num .. "," .. latency .. "," ..
+                    modifier_hash .. "," .. sync_hash
+    return message
   end
 }
 
@@ -62,8 +78,7 @@ end
 
 --describes how to decode a message for each message type
 local decode_message = {
-  [messenger.INPUT] = function(message)
-    local split_message = bizstring.split(message, ",")
+  [messenger.INPUT] = function(split_message)
     --get buttons from the message
     local input_message = split_message[0]
     their_input = {}
@@ -76,6 +91,19 @@ local decode_message = {
     local frame_message = split_message[1]
     their_frame = tonumber(frame_message)
     return {their_input, their_frame}
+  end,
+  [messenger.CONFIG] = function(split_message)
+    --get playernum from message
+    local player_message = split_message[0]
+    their_playernum = tonumber(player_message)
+    --get latency from message
+    local latency_message = split_message[1]
+    their_latency = tonumber(latency_message)
+    --get modifier hash from message
+    local their_modifier_hash = split_message[2]
+    --get sync hash from message
+    local their_sync_hash = split_message[3]
+    return {their_playernum, their_latency, their_modifier_hash, their_sync_hash}
   end
 }
 
@@ -96,7 +124,8 @@ function messenger.receive(client_socket)
   message = message:sub(2)
   --decode the message
   local decoder = decode_message[message_type]
-  local data = decoder(message)
+  local split_message = bizstring.split(message, ",")
+  local data = decoder(split_message)
   --return info
   return message_type, data
 end
