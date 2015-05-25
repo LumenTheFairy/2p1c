@@ -33,11 +33,22 @@ emu.frameadvance()
 client_socket:settimeout(config.input_timeout)
 
 --when the script finishes, make sure to close the connection
-event.onexit(function()
+local function close_connection()
   client_socket:close()
   server:close()
   console.log("Connection closed.")
-end)
+end
+
+event.onexit(close_connection)
+
+--furthermore, override error with a function that closes the connection
+--before the error is actually thrown
+local old_error = error
+
+error = function(message, level)
+  close_connection()
+  old_error(message, 0)
+end
 
 --sync the gameplay
 sync.syncconfig(client_socket, 1)

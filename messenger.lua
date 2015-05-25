@@ -22,6 +22,7 @@ end
 
 --describes how to encode a message for each message type
 local encode_message = {
+
   --an input message expects 2 arguments:
   --a table containing the inputs pressed,
   --and the frame this input should be pressed on
@@ -40,6 +41,7 @@ local encode_message = {
     message = message .. "," .. frame
     return message
   end,
+
   --a config message expects 4 arguments:
   --the player number,
   --the latency frames,
@@ -78,6 +80,7 @@ end
 
 --describes how to decode a message for each message type
 local decode_message = {
+
   [messenger.INPUT] = function(split_message)
     --get buttons from the message
     local input_message = split_message[0]
@@ -92,6 +95,7 @@ local decode_message = {
     their_frame = tonumber(frame_message)
     return {their_input, their_frame}
   end,
+
   [messenger.CONFIG] = function(split_message)
     --get playernum from message
     local player_message = split_message[0]
@@ -114,7 +118,7 @@ function messenger.receive(client_socket)
   --get the next message
   message = client_socket:receive()
   if(message == nil) then
-    error("Timed out waiting for a message from the other player.")
+    error("Timed out waiting for a message from the other player (the other player may have disconnected.)")
   end
   --determine message type
   local message_type = char_to_message_type[message:sub(1,1)]
