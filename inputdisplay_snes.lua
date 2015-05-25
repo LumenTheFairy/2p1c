@@ -16,7 +16,7 @@ return function(myController, theirController, player)
 
 	local color1 = "Red"
 	local color2 = "Green"
-	if player == 1 then
+	if player == 2 then
 		color1, color2 = color2, color1
 	end
 

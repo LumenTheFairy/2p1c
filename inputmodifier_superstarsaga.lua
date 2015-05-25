@@ -20,7 +20,7 @@ return function(myInput, theirInput, playernum)
   local mario_input = myInput
   local luigi_input = theirInput
 
-  if playernum == 1 then
+  if playernum == 2 then
     mario_input, luigi_input = luigi_input, mario_input
   end
 
@@ -106,7 +106,7 @@ return function(myInput, theirInput, playernum)
     end 
   end
 
-  if playernum == 1 then
+  if playernum == 2 then
     mario_input, luigi_input = luigi_input, mario_input
   end
 

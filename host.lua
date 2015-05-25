@@ -52,5 +52,5 @@ end
 
 --sync the gameplay
 sync.syncconfig(client_socket, 1)
-sync.synctoframe1()
+sync.synctoframe1(client_socket)
 sync.syncallinput(client_socket)

@@ -29,10 +29,14 @@ config.latency = 4
 --This is the file name (without the .lua extension) of the lua script that
 --contains the input modifier you wish to use. If you do not wish to run any
 --input modification, set this to "inputmodifier_none".
-config.input_modifier = "inputmodifier_none"
+config.input_modifier = "inputmodifier_leftandright"
 --This is the file name (without the .lua extension) of the lua script that
 --contains the input display code wish to use. If you do not wish to display
 --input, set this to "inputdisplay_none".
 config.input_display = "inputdisplay_snes"
+--This is the path from directory containing the sync scripts to BizHawk's root
+--directory (the directory where the EmuHawk executable is found.) This is used
+--when creating and loading savestates.
+config.path_to_root = "../../"
 
 return config

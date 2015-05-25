@@ -5,7 +5,7 @@ local config = require("config")
 local messenger = require("messenger")
 
 --the person who paused gets a menu with various options
-function pausing.pausemenu(client_socket)
+function pausing.pausemenu(client_socket, future_frame)
   --send back information about how we unpaused
   local message_type = -1
   local data = {}
@@ -14,7 +14,7 @@ function pausing.pausemenu(client_socket)
   client.pause()
 
   --create form for pause menu
-  local form_handle = forms.newform(150, 70, "Paused")
+  local form_handle = forms.newform(150, 150, "Paused")
 
   --create unpuase button
   local unpause_event = function()
@@ -35,6 +35,29 @@ function pausing.pausemenu(client_socket)
     message_type = messenger.QUIT
   end
   local quit_handle = forms.button(form_handle, "Quit", quit_event, 75, 10, 60, 25)
+
+  --create buttons to toggle input modification
+  local modifier_lable_handle = forms.label(form_handle, "Set use of input modifier:", 5, 40, 130, 20)
+
+  local modifier_on_event = function()
+    --tell the other player to quit, and close the menu
+    messenger.send(client_socket, messenger.MODIFIER, true, future_frame)
+    client.unpause()
+    forms.destroy(form_handle)
+    message_type = messenger.MODIFIER
+    data = {true, future_frame}
+  end
+  local modifier_on_handle = forms.button(form_handle, "ON", modifier_on_event, 5, 65, 60, 25)
+
+  local modifier_off_event = function()
+    --tell the other player to quit, and close the menu
+    messenger.send(client_socket, messenger.MODIFIER, false, future_frame)
+    client.unpause()
+    forms.destroy(form_handle)
+    message_type = messenger.MODIFIER
+    data = {false, future_frame}
+  end
+  local modifier_on_handle = forms.button(form_handle, "OFF", modifier_off_event, 75, 65, 60, 25)
 
   --unpause if the form is closed
   --(this was the only way I could figure out to test if the form is open

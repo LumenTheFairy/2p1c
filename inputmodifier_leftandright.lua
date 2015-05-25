@@ -7,19 +7,19 @@ return function(myInput, theirInput, playernum)
     myInput, theirInput = theirInput, myInput
   end
 
-  myInput["A"] = nil
-  myInput["B"] = nil
-  myInput["X"] = nil
-  myInput["Y"] = nil
-  myInput["R"] = nil
-  myInput["Start"] = nil
+  theirInput["A"] = nil
+  theirInput["B"] = nil
+  theirInput["X"] = nil
+  theirInput["Y"] = nil
+  theirInput["R"] = nil
+  theirInput["Start"] = nil
 
-  theirInput["Up"] = nil
-  theirInput["Down"] = nil
-  theirInput["Left"] = nil
-  theirInput["Right"] = nil
-  theirInput["L"] = nil
-  theirInput["Select"] = nil
+  myInput["Up"] = nil
+  myInput["Down"] = nil
+  myInput["Left"] = nil
+  myInput["Right"] = nil
+  myInput["L"] = nil
+  myInput["Select"] = nil
 
   if playernum == 2 then
     myInput, theirInput = theirInput, myInput

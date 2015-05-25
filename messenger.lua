@@ -10,6 +10,9 @@ messenger.CONFIG = 1
 messenger.PAUSE = 2
 messenger.UNPAUSE = 3
 messenger.QUIT = 4
+messenger.MODIFIER = 5
+messenger.SAVE_HASH = 6
+messenger.LOAD_FAIL = 7
 
 --the first character of the message tells what kind of message was sent
 local message_type_to_char = {
@@ -17,7 +20,10 @@ local message_type_to_char = {
   [messenger.CONFIG] = "c",
   [messenger.PAUSE] = "p",
   [messenger.UNPAUSE] = "u",
-  [messenger.QUIT] = "q"
+  [messenger.QUIT] = "q",
+  [messenger.MODIFIER] = "m",
+  [messenger.SAVE_HASH] = "h",
+  [messenger.LOAD_FAIL] = "f"
 }
 --inverse of the previous table
 local char_to_message_type = {}
@@ -77,6 +83,35 @@ local encode_message = {
   --a quit message expects no arguments
   [messenger.QUIT] = function(data)
     return ""
+  end,
+
+  --a modifier message expects exactly 2 arguments:
+  --a boolean saying whether to turn the input modifier on or off,
+  --and the frame this modifier should change on
+  [messenger.MODIFIER] = function(data)
+    local modifier_state = data[1]
+    local frame = data[2]
+    local message = ""
+    if (modifier_state) then
+      message = "1"
+    else
+      message = "0"
+    end
+    return message .. "," .. frame
+  end,
+
+  --a save hash message expects 1 argument:
+  --the save hash number
+  [messenger.SAVE_HASH] = function(data)
+    local save_hash = data[1]
+    return save_hash
+  end,
+
+  --a load fail message expects 1 argument:
+  --the reason for failure
+  [messenger.LOAD_FAIL] = function(data)
+    local reason = data[1]
+    return reason
   end
 }
 
@@ -106,7 +141,7 @@ local decode_message = {
   [messenger.INPUT] = function(split_message)
     --get buttons from the message
     local input_message = split_message[0]
-    their_input = {}
+    local their_input = {}
     for i, b in pairs(controller.buttons) do
       if (input_message:sub(i,i) == "1") then
         their_input[b] = true
@@ -114,17 +149,17 @@ local decode_message = {
     end
     --get frame count from message
     local frame_message = split_message[1]
-    their_frame = tonumber(frame_message)
+    local their_frame = tonumber(frame_message)
     return {their_input, their_frame}
   end,
 
   [messenger.CONFIG] = function(split_message)
     --get playernum from message
     local player_message = split_message[0]
-    their_playernum = tonumber(player_message)
+    local their_playernum = tonumber(player_message)
     --get latency from message
     local latency_message = split_message[1]
-    their_latency = tonumber(latency_message)
+    local their_latency = tonumber(latency_message)
     --get modifier hash from message
     local their_modifier_hash = split_message[2]
     --get sync hash from message
@@ -142,6 +177,31 @@ local decode_message = {
 
   [messenger.QUIT] = function(split_message)
     return {}
+  end,
+
+  [messenger.MODIFIER] = function(split_message)
+    --get modifier state from message
+    local modifier_state_message = split_message[0]
+    local their_modifier_state = false
+    if (modifier_state_message == "1") then
+      their_modifier_state = true
+    end
+    --get frame count from message
+    local frame_message = split_message[1]
+    local their_frame = tonumber(frame_message)
+    return {their_modifier_state, their_frame}
+  end,
+
+  [messenger.SAVE_HASH] = function(split_message)
+    --get save hash from message
+    local their_save_hash = split_message[0]
+    return {their_save_hash}
+  end,
+
+  [messenger.LOAD_FAIL] = function(split_message)
+    --get reason for failure from message
+    local their_reason = split_message[0]
+    return {their_reason}
   end
 }
 
