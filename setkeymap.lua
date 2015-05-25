@@ -1,6 +1,7 @@
 --author: TestRunner
 local keymap = {}
-local keylist = {"Up", "Down", "Left", "Right", "A", "B", "X", "Y", "L", "R", "Start", "Select"}
+controller = require("controller")
+local keylist = controller.buttons
 
 function getKey(t)
 	local key = nil
@@ -48,17 +49,21 @@ for k, v in ipairs(keylist) do
 	getInput(v)
 end
 
-f = assert(io.open("keymap.lua", "w"))
-f:write("local keymap = {\n")
-local first = true
+local output = ""
+output = output
+.. "--This file contains the controller key mappings.\n"
+.. "--This file can be set appropriately by running setkeymap.lua,\n"
+.. "--or it can be manually edited - the names of keys can be found at\n"
+.. "-- http://www.codeproject.com/Tips/73227/Keys-Enumeration-Win\n"
+.. "local keymap = {\n"
 for k, v in pairs(keymap) do
-	if first then
-		first = false
-	else
-		f:write(",")
-	end
-	f:write("  [\"", k ,"\"] = \"", v, "\"\n")
+	output = output .. "  " .. k .. " = \"" .. v .. "\",\n"
 end
-f:write("}\n\nreturn keymap")
+--remove the final comma
+output = output:sub(1, -3) .. "\n"
 
+output = output .. "}\n\nreturn keymap"
+
+f = assert(io.open(controller.keymapfilename .. ".lua", "w"))
+f:write(output)
 f:close()

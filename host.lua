@@ -4,7 +4,7 @@ local sync = require("sync")
 local config = require("config")
 
 --create the server
-local server = assert(socket.bind("localhost", config.port, 1))
+local server = assert(socket.bind("*", config.port, 1))
 local ip, setport = server:getsockname()
 console.log("Created server at " .. ip .. " on port " .. setport)
 
@@ -39,4 +39,4 @@ end)
 
 --sync the gameplay
 sync.synctoframe1()
-sync.syncallinput(client_socket, 1)
+sync.syncallinput(client_socket)
