@@ -12,7 +12,8 @@ local keymap = {
   A = "L",
   S = "R",
   Return = "Start",
-  RightShift = "Select"
+  RightShift = "Select",
+  Escape = "PAUSE"
 }
 
 return keymap

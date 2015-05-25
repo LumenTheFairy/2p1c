@@ -7,7 +7,7 @@ config.player = 1
 --This is the amount of time, in seconds, that the host will wait for the
 --client to connect. If this timeout is reached, the host script will end.
 --This value is only inportant for the host.
-config.accept_timeout = 5
+config.accept_timeout = 10
 --This is the amount of time, in seconds, that the input syncer will wait
 --for the other player's input. If this timeout is reached, the connection
 --will end, so a low timeout may ruin syncing if one player pauses emulation,

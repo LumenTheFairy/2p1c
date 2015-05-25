@@ -2,6 +2,7 @@
 local keymap = {}
 controller = require("controller")
 local keylist = controller.buttons
+table.insert(keylist, "PAUSE")
 
 function getKey(t)
 	local key = nil

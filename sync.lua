@@ -52,6 +52,7 @@ function sync.syncconfig(client_socket, default_player)
   for line in io.lines("sync.lua") do sync_code = sync_code .. line .. "\n" end
   for line in io.lines("controller.lua") do sync_code = sync_code .. line .. "\n" end
   for line in io.lines("messenger.lua") do sync_code = sync_code .. line .. "\n" end
+  for line in io.lines("pausing.lua") do sync_code = sync_code .. line .. "\n" end
   local sync_hash = sha1.sha1(sync_code)
 
   --send the configuration
@@ -126,6 +127,7 @@ function sync.syncallinput(client_socket)
 
   local controller = require("controller")
   local keymap = require(controller.keymapfilename)
+  local pausing = require("pausing")
 
   --create input queues
   local my_input_queue = {}
@@ -142,28 +144,54 @@ function sync.syncallinput(client_socket)
   local received_message_type, received_data
   local received_frame
   local my_input, their_input, final_input
+  local unpause_type, unpause_data
 
   while 1 do
     current_frame = emu.framecount()
     future_frame = current_frame + config.latency
 
-    --get the player input, and add it to the queue
+    --get the player input
     current_input = controller.get(keymap)
+
+    --pause if pause was pressed
+    if (current_input["PAUSE"] == true) then
+      unpause_type, unpause_data = pausing.pausemenu(client_socket)
+      if (unpause_type == messenger.UNPAUSE) then
+        --do nothing
+      elseif (unpause_type == messenger.QUIT) then
+        return
+      else
+        error("Unexpected message type received.")
+      end
+      current_input["PAUSE"] = nil
+    end
+
+    --add input to the queue
     my_input_queue[future_frame] = current_input
 
     --send the input to the other player
     messenger.send(client_socket, messenger.INPUT, current_input, future_frame)
 
     --receive this frame's input from the other player
-    while (their_input_queue[emu.framecount()] == nil) do
+    while (their_input_queue[current_frame] == nil) do
       received_message_type, received_data = messenger.receive(client_socket)
-      if(received_message_type == messenger.INPUT) then
+      if (received_message_type == messenger.INPUT) then
         --we received input
         received_input = received_data[1]
         received_frame = received_data[2]
 
         --add the input to the queue
         their_input_queue[received_frame] = received_input
+      elseif (received_message_type == messenger.PAUSE) then
+        unpause_type, unpause_data = pausing.pausewait(client_socket)
+        if (unpause_type == messenger.UNPAUSE) then
+          console.log("Unpaused.")
+        elseif (unpause_type == messenger.QUIT) then
+          console.log("The other player has quit.")
+          return
+        else
+          error("Unexpected message type received.")
+        end
       else
         error("Unexpected message type received.")
       end
@@ -171,8 +199,8 @@ function sync.syncallinput(client_socket)
 
     --construct the input for the next frame
     final_input = {}
-    my_input = my_input_queue[emu.framecount()]
-    their_input = their_input_queue[emu.framecount()]
+    my_input = my_input_queue[current_frame]
+    their_input = their_input_queue[current_frame]
 
     my_input, their_input = modify_inputs(my_input, their_input, config.player)
     display_inputs(my_input, their_input, config.player)
@@ -189,8 +217,8 @@ function sync.syncallinput(client_socket)
     joypad.set(final_input)
 
     --clear these entries to keep the queue size from growing
-    my_input_queue[emu.framecount()] = nil
-    their_input_queue[emu.framecount()] = nil
+    my_input_queue[current_frame] = nil
+    their_input_queue[current_frame] = nil
 
     emu.frameadvance()
 

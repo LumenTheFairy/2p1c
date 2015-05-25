@@ -1,4 +1,5 @@
 --Abstracts message passing between two clients
+--author: TheOnlyOne
 local messenger = {}
 
 controller = require("controller")
@@ -6,11 +7,17 @@ controller = require("controller")
 --list of message types
 messenger.INPUT = 0
 messenger.CONFIG = 1
+messenger.PAUSE = 2
+messenger.UNPAUSE = 3
+messenger.QUIT = 4
 
 --the first character of the message tells what kind of message was sent
 local message_type_to_char = {
   [messenger.INPUT] = "i",
-  [messenger.CONFIG] = "c"
+  [messenger.CONFIG] = "c",
+  [messenger.PAUSE] = "p",
+  [messenger.UNPAUSE] = "u",
+  [messenger.QUIT] = "q"
 }
 --inverse of the previous table
 local char_to_message_type = {}
@@ -55,6 +62,21 @@ local encode_message = {
     local message = player_num .. "," .. latency .. "," ..
                     modifier_hash .. "," .. sync_hash
     return message
+  end,
+
+  --a pause message expects no arguments
+  [messenger.PAUSE] = function(data)
+    return ""
+  end,
+
+  --an unpause message expects no arguments
+  [messenger.UNPAUSE] = function(data)
+    return ""
+  end,
+
+  --a quit message expects no arguments
+  [messenger.QUIT] = function(data)
+    return ""
   end
 }
 
@@ -108,6 +130,18 @@ local decode_message = {
     --get sync hash from message
     local their_sync_hash = split_message[3]
     return {their_playernum, their_latency, their_modifier_hash, their_sync_hash}
+  end,
+
+  [messenger.PAUSE] = function(split_message)
+    return {}
+  end,
+
+  [messenger.UNPAUSE] = function(split_message)
+    return {}
+  end,
+
+  [messenger.QUIT] = function(split_message)
+    return {}
   end
 }
 
