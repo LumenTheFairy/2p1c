@@ -9,12 +9,11 @@ function pausing.pausemenu(client_socket, future_frame)
   --send back information about how we unpaused
   local message_type = -1
   local data = {}
-  --causes the other player to pause, and pause the emulator
-  messenger.send(client_socket, messenger.PAUSE)
+
   client.pause()
 
   --create form for pause menu
-  local form_handle = forms.newform(150, 150, "Paused")
+  local form_handle = forms.newform(300, 300, "Paused")
 
   --create unpuase button
   local unpause_event = function()
@@ -58,6 +57,38 @@ function pausing.pausemenu(client_socket, future_frame)
     data = {false, future_frame}
   end
   local modifier_on_handle = forms.button(form_handle, "OFF", modifier_off_event, 75, 65, 60, 25)
+
+  --create buttons to load a savestate slot
+  local load_lable_handle = forms.label(form_handle, "Load savestate slot:", 5, 100, 130, 20)
+  local load_handles = {}
+
+  for i = 1,9 do
+    local load_event = function()
+      --tell the other player to load slot i, and close the menu
+      messenger.send(client_socket, messenger.LOAD, i)
+      client.unpause()
+      forms.destroy(form_handle)
+      message_type = messenger.LOAD
+      data = {i}
+    end
+    table.insert(load_handles, forms.button(form_handle, "" .. i, load_event, 30 * i - 20, 125, 20, 25))
+  end
+
+  --create buttons to save to a savestate slot
+  local save_lable_handle = forms.label(form_handle, "Save to savestate slot:", 5, 160, 130, 20)
+  local save_handles = {}
+
+  for i = 1,9 do
+    local save_event = function()
+      --tell the other player to load slot i, and close the menu
+      messenger.send(client_socket, messenger.SAVE, i, future_frame)
+      client.unpause()
+      forms.destroy(form_handle)
+      message_type = messenger.SAVE
+      data = {i, future_frame}
+    end
+    table.insert(save_handles, forms.button(form_handle, "" .. i, save_event, 30 * i - 20, 185, 20, 25))
+  end
 
   --unpause if the form is closed
   --(this was the only way I could figure out to test if the form is open

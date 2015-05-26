@@ -13,6 +13,8 @@ messenger.QUIT = 4
 messenger.MODIFIER = 5
 messenger.SAVE_HASH = 6
 messenger.LOAD_FAIL = 7
+messenger.LOAD = 8
+messenger.SAVE = 9
 
 --the first character of the message tells what kind of message was sent
 local message_type_to_char = {
@@ -23,7 +25,9 @@ local message_type_to_char = {
   [messenger.QUIT] = "q",
   [messenger.MODIFIER] = "m",
   [messenger.SAVE_HASH] = "h",
-  [messenger.LOAD_FAIL] = "f"
+  [messenger.LOAD_FAIL] = "f",
+  [messenger.LOAD] = "l",
+  [messenger.SAVE] = "s"
 }
 --inverse of the previous table
 local char_to_message_type = {}
@@ -70,9 +74,10 @@ local encode_message = {
     return message
   end,
 
-  --a pause message expects no arguments
+  --a pause message expects 1 argument:
+  --"request" or "accept" depending on who pressed pause
   [messenger.PAUSE] = function(data)
-    return ""
+    return data[1]
   end,
 
   --an unpause message expects no arguments
@@ -112,6 +117,22 @@ local encode_message = {
   [messenger.LOAD_FAIL] = function(data)
     local reason = data[1]
     return reason
+  end,
+
+  --a load message expects 1 argument:
+  --the slot that should be loaded
+  [messenger.LOAD] = function(data)
+    local slot = data[1]
+    return "" .. slot
+  end,
+
+  --a load message expects 2 arguments:
+  --the slot that should be saved to,
+  --and the frame on which the save should occur
+  [messenger.SAVE] = function(data)
+    local slot = data[1]
+    local frame = data[2]
+    return slot .. "," .. frame
   end
 }
 
@@ -168,7 +189,9 @@ local decode_message = {
   end,
 
   [messenger.PAUSE] = function(split_message)
-    return {}
+    --get pause state from the message
+    local their_pause_state = split_message[0]
+    return {their_pause_state}
   end,
 
   [messenger.UNPAUSE] = function(split_message)
@@ -202,6 +225,23 @@ local decode_message = {
     --get reason for failure from message
     local their_reason = split_message[0]
     return {their_reason}
+  end,
+
+  [messenger.LOAD] = function(split_message)
+    --get slot from message
+    local slot_message = split_message[0]
+    local their_slot = tonumber(slot_message)
+    return {their_slot}
+  end,
+
+  [messenger.SAVE] = function(split_message)
+    --get slot from message
+    local slot_message = split_message[0]
+    local their_slot = tonumber(slot_message)
+    --get frame from message
+    local frame_message = split_message[1]
+    local their_frame = tonumber(frame_message)
+    return {their_slot, their_frame}
   end
 }
 
