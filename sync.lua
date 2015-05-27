@@ -123,29 +123,33 @@ function sync.synctoframe1(client_socket)
   emu.frameadvance()
 end
 
+local my_input_queue = {}
+local their_input_queue = {}
+local modifier_state_queue = {}
+local save_queue = {}
+local current_input, received_input
+local received_message_type, received_data
+local received_frame
+local my_input, their_input, final_input
+local pause_type, unpause_type, unpause_data
 
+local controller = require("controller")
+local keymap = require(controller.keymapfilename)
+local pausing = require("pausing")
 
---shares the input between two players, making sure that the same input is
---pressed for both players on every frame
-function sync.syncallinput(client_socket)
+local current_frame, future_frame
+local modifier_is_in_effect = true
+local should_break = false
 
-  local controller = require("controller")
-  local keymap = require(controller.keymapfilename)
-  local pausing = require("pausing")
-
-  local current_frame, future_frame
-  local modifier_is_in_effect = true
-  local should_break = false
-
-  while 1 do
+function sync.resetsync()
     current_frame = emu.framecount()
     future_frame = current_frame + config.latency
 
     --create input queues
-    local my_input_queue = {}
-    local their_input_queue = {}
-    local modifier_state_queue = {}
-    local save_queue = {}
+    my_input_queue = {}
+    their_input_queue = {}
+    modifier_state_queue = {}
+    save_queue = {}
 
     --set the first latency frames to no input
     for i = current_frame, (future_frame - 1) do
@@ -153,189 +157,204 @@ function sync.syncallinput(client_socket)
       their_input_queue[i] = {}
     end
 
-    local current_input, received_input
-    local received_message_type, received_data
-    local received_frame
-    local my_input, their_input, final_input
-    local pause_type, unpause_type, unpause_data
+    current_input, received_input
+    received_message_type, received_data
+    received_frame
+    my_input, their_input, final_input
+    pause_type, unpause_type, unpause_data
+end
 
+--shares the input between two players, making sure that the same input is
+--pressed for both players on every frame
+function sync.syncallinput(client_socket)
+  current_frame = emu.framecount()
+  future_frame = current_frame + config.latency
+
+  --get the player input
+  current_input = controller.get(keymap)
+
+  --pause if pause was pressed
+  if (current_input["PAUSE"] == true) then
+    --request the other player to pause
+    messenger.send(client_socket, messenger.PAUSE, "request")
+    --read input until the request is accepted
+    received_message_type = -1
     while 1 do
-      current_frame = emu.framecount()
-      future_frame = current_frame + config.latency
+      received_message_type, received_data = messenger.receive(client_socket)
+      if (received_message_type == messenger.INPUT) then
+        --we received input
+        received_input = received_data[1]
+        received_frame = received_data[2]
 
-      --get the player input
-      current_input = controller.get(keymap)
-
-      --pause if pause was pressed
-      if (current_input["PAUSE"] == true) then
-        --request the other player to pause
-        messenger.send(client_socket, messenger.PAUSE, "request")
-        --read input until the request is accepted
-        received_message_type = -1
-        while 1 do
-          received_message_type, received_data = messenger.receive(client_socket)
-          if (received_message_type == messenger.INPUT) then
-            --we received input
-            received_input = received_data[1]
-            received_frame = received_data[2]
-
-            --add the input to the queue
-            their_input_queue[received_frame] = received_input
-          elseif (received_message_type == messenger.PAUSE) then
-            if (received_data[1] == "accept") then
-              break
-            else
-              error("The other player did not properly accept the pause.")
-            end
-          else
-            error("Unexpected message type received.")
-          end
-        end
-        --pause the game, and properly deal with the output of the menu
-        unpause_type, unpause_data = pausing.pausemenu(client_socket, future_frame)
-        if (unpause_type == messenger.UNPAUSE) then
-          console.log("Unpaused.")
-        elseif (unpause_type == messenger.QUIT) then
-          console.log("Quit.")
-          return
-        elseif (unpause_type == messenger.MODIFIER) then
-          modifier_state_queue[unpause_data[2]] = unpause_data[1]
-          if (unpause_data[1]) then
-            console.log("Input modifier is ON.")
-          else
-            console.log("Input modifier is OFF.")
-          end
-        elseif (unpause_type == messenger.LOAD) then
-          local slot = unpause_data[1]
-          --check if the state can be loaded
-          local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
-          if (not status) then
-            --if not, continue on normally
-            console.log(err)
-            console.log("Did not load slot " .. slot .. ".")
-          else
-            --if so, load the state, and reset necessary variables
-            savestate.loadslot(slot)
-            console.log("Savestate slot " .. slot .. " loaded.")
-            break
-          end
-        elseif (unpause_type == messenger.SAVE) then
-          save_queue[unpause_data[2]] = unpause_data[1]
+        --add the input to the queue
+        their_input_queue[received_frame] = received_input
+      elseif (received_message_type == messenger.PAUSE) then
+        if (received_data[1] == "accept") then
+          break
         else
-          error("Unexpected message type received.")
+          error("The other player did not properly accept the pause.")
         end
-        current_input["PAUSE"] = nil
+      else
+        error("Unexpected message type received.")
       end
-
-      --add input to the queue
-      my_input_queue[future_frame] = current_input
-
-      --send the input to the other player
-      messenger.send(client_socket, messenger.INPUT, current_input, future_frame)
-
-      --receive this frame's input from the other player
-      while (their_input_queue[current_frame] == nil) do
-        received_message_type, received_data = messenger.receive(client_socket)
-        if (received_message_type == messenger.INPUT) then
-          --we received input
-          received_input = received_data[1]
-          received_frame = received_data[2]
-
-          --add the input to the queue
-          their_input_queue[received_frame] = received_input
-        elseif (received_message_type == messenger.PAUSE) then
-          pause_type = received_data[1]
-          if (pause_type == "request") then
-            --the other player pressed pause, aknowledge, and pause
-            messenger.send(client_socket, messenger.PAUSE, "accept")
-            unpause_type, unpause_data = pausing.pausewait(client_socket)
-          else
-            console.log("Something weird happened, but it should be okay.")
-          end
-          if (unpause_type == messenger.UNPAUSE) then
-            console.log("Unpaused.")
-          elseif (unpause_type == messenger.QUIT) then
-            console.log("The other player quit.")
-            return
-          elseif (unpause_type == messenger.MODIFIER) then
-            modifier_state_queue[unpause_data[2]] = unpause_data[1]
-            if (unpause_data[1]) then
-              console.log("Input modifier is ON.")
-            else
-              console.log("Input modifier is OFF.")
-            end
-          elseif (unpause_type == messenger.LOAD) then
-            local slot = unpause_data[1]
-            --check if the state can be loaded
-            local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
-            if (not status) then
-              --if not, continue on normally
-              console.log(err)
-              console.log("Did not load slot " .. slot .. ".")
-            else
-              --if so, load the state, and reset necessary variables
-              savestate.loadslot(slot)
-              console.log("Savestate slot " .. slot .. " loaded.")
-              should_break = true
-              break
-            end
-          elseif (unpause_type == messenger.SAVE) then
-            save_queue[unpause_data[2]] = unpause_data[1]
-          else
-            error("Unexpected message type received.")
-          end
-        else
-          error("Unexpected message type received.")
-        end
-      end
-
-      if (should_break) then
-        should_break = false
-        break
-      end
-
-      --construct the input for the next frame
-      final_input = {}
-      my_input = my_input_queue[current_frame]
-      their_input = their_input_queue[current_frame]
-
-      --switch effect of modifier if necessary
-      if (modifier_state_queue[current_frame] ~= nil) then
-        modifier_is_in_effect = modifier_state_queue[current_frame]
-      end
-
-      if (modifier_is_in_effect) then
-        my_input, their_input = modify_inputs(my_input, their_input, config.player)
-      end
-
-      display_inputs(my_input, their_input, config.player)
-
-      for i, b in pairs(controller.buttons) do
-        if (my_input[b] == true or their_input[b] == true) then
-          final_input[b] = true
-        else
-          final_input[b] = false
-        end
-      end
-
-      --set the input
-      joypad.set(final_input)
-
-      --clear these entries to keep the queue size from growing
-      my_input_queue[current_frame] = nil
-      their_input_queue[current_frame] = nil
-
-      --make a save state if requested
-      if (save_queue[current_frame] ~= nil) then
-        savestate.saveslot(save_queue[current_frame])
-        console.log("Saved state to slot " .. save_queue[current_frame] .. ".")
-      end
-
-      emu.frameadvance()
-
-      --clear all input so that actual inputs do not interfere
-      joypad.set(controller.unset)
     end
+  end
+
+  --add input to the queue
+  my_input_queue[future_frame] = current_input
+
+  --send the input to the other player
+  messenger.send(client_socket, messenger.INPUT, current_input, future_frame)
+
+  --receive this frame's input from the other player
+  while (their_input_queue[current_frame] == nil) do
+    received_message_type, received_data = messenger.receive(client_socket)
+    if (received_message_type == messenger.INPUT) then
+      --we received input
+      received_input = received_data[1]
+      received_frame = received_data[2]
+
+      --add the input to the queue
+      their_input_queue[received_frame] = received_input
+    elseif (received_message_type == messenger.PAUSE) then
+      pause_type = received_data[1]
+      if (pause_type == "request") then
+        --the other player pressed pause, aknowledge, and pause
+        messenger.send(client_socket, messenger.PAUSE, "accept")
+        unpause_type, unpause_data = pausing.pausewait(client_socket)
+      else
+        console.log("Something weird happened, but it should be okay.")
+      end
+      if (unpause_type == messenger.UNPAUSE) then
+        console.log("Unpaused.")
+      elseif (unpause_type == messenger.QUIT) then
+        console.log("The other player quit.")
+        return
+      elseif (unpause_type == messenger.MODIFIER) then
+        modifier_state_queue[unpause_data[2]] = unpause_data[1]
+        if (unpause_data[1]) then
+          console.log("Input modifier is ON.")
+        else
+          console.log("Input modifier is OFF.")
+        end
+      elseif (unpause_type == messenger.LOAD) then
+        local slot = unpause_data[1]
+        --check if the state can be loaded
+        local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
+        if (not status) then
+          --if not, continue on normally
+          console.log(err)
+          console.log("Did not load slot " .. slot .. ".")
+        else
+          --if so, load the state, and reset necessary variables
+          savestate.loadslot(slot)
+          console.log("Savestate slot " .. slot .. " loaded.")
+          sync.resetsync()
+          return
+        end
+      elseif (unpause_type == messenger.SAVE) then
+        save_queue[unpause_data[2]] = unpause_data[1]
+      else
+        error("Unexpected message type received.")
+      end
+    else
+      error("Unexpected message type received.")
+    end
+  end
+
+  --construct the input for the next frame
+  final_input = {}
+  my_input = my_input_queue[current_frame]
+  their_input = their_input_queue[current_frame]
+
+  --switch effect of modifier if necessary
+  if (modifier_state_queue[current_frame] ~= nil) then
+    modifier_is_in_effect = modifier_state_queue[current_frame]
+  end
+
+  if (modifier_is_in_effect) then
+    my_input, their_input = modify_inputs(my_input, their_input, config.player)
+  end
+
+  display_inputs(my_input, their_input, config.player)
+
+  for i, b in pairs(controller.buttons) do
+    if (my_input[b] == true or their_input[b] == true) then
+      final_input[b] = true
+    else
+      final_input[b] = false
+    end
+  end
+
+  --set the input
+  joypad.set(final_input)
+
+  --clear these entries to keep the queue size from growing
+  my_input_queue[current_frame] = nil
+  their_input_queue[current_frame] = nil
+
+  --make a save state if requested
+  if (save_queue[current_frame] ~= nil) then
+    savestate.saveslot(save_queue[current_frame])
+    console.log("Saved state to slot " .. save_queue[current_frame] .. ".")
+  end
+end
+
+
+function sync.syncpause(client_socket)
+  status, received_message_type, received_data = pcall(messenger.receive(client_socket))
+  if not status then
+    return
+  end
+
+  if (received_message_type == messenger.INPUT) then
+    --we received input
+    received_input = received_data[1]
+    received_frame = received_data[2]
+
+    --add the input to the queue
+    their_input_queue[received_frame] = received_input
+  elseif (received_message_type == messenger.PAUSE) then
+    pause_type = received_data[1]
+    if (unpause_type == messenger.UNPAUSE) then
+      console.log("Unpaused.")
+      syncStatus = "Play"
+    elseif (unpause_type == messenger.QUIT) then
+      console.log("The other player quit.")
+      syncStatus = "Idle"
+      client_socket:close()
+      client_socket = nil
+    elseif (unpause_type == messenger.MODIFIER) then
+      modifier_state_queue[unpause_data[2]] = unpause_data[1]
+      if (unpause_data[1]) then
+        console.log("Input modifier is ON.")
+      else
+        console.log("Input modifier is OFF.")
+      end
+    elseif (unpause_type == messenger.LOAD) then
+      local slot = unpause_data[1]
+      --check if the state can be loaded
+      client_socket:settimeout(config.input_timeout)
+      local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
+      client_socket:settimeout(0)
+      if (not status) then
+        --if not, continue on normally
+        console.log(err)
+        console.log("Did not load slot " .. slot .. ".")
+      else
+        --if so, load the state, and reset necessary variables
+        savestate.loadslot(slot)
+        console.log("Savestate slot " .. slot .. " loaded.")
+        sync.resetsync()
+        return
+      end
+    elseif (unpause_type == messenger.SAVE) then
+      save_queue[unpause_data[2]] = unpause_data[1]
+    else
+      error("Unexpected message type received.")
+    end
+  else
+    error("Unexpected message type received.")
   end
 end
 
