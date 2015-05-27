@@ -58,7 +58,7 @@ output = output
 .. "-- http://www.codeproject.com/Tips/73227/Keys-Enumeration-Win\n"
 .. "local keymap = {\n"
 for k, v in pairs(keymap) do
-	output = output .. "  " .. k .. " = \"" .. v .. "\",\n"
+	output = output .. "  [\"" .. k .. "\"] = \"" .. v .. "\",\n"
 end
 --remove the final comma
 output = output:sub(1, -3) .. "\n"
