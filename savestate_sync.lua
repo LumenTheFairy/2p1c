@@ -3,7 +3,6 @@
 --author: TheOnlyOne
 local savestate_sync = {}
 
-local config = require("config")
 local messenger = require("messenger")
 local sha1 = require("sha1")
 

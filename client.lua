@@ -2,15 +2,19 @@
 
 local socket = require("socket")
 local sync = require("sync")
-local config = require("config")
 
 return function()
 
-	client_socket = assert(socket.connect(config.hostname, config.port))
+	client_socket, err = socket.connect(config.hostname, config.port)
+	if (client_socket == nil) then
+		printOutput("Connection failed: " .. err)
+		cleanConnection()
+		return
+	end
 
 	--display the server's information
 	local peername, peerport = client_socket:getpeername()
-	console.log("Connected to " .. peername .. " on port " .. peerport)
+	printOutput("Connected to " .. peername .. " on port " .. peerport)
 	emu.frameadvance()
 	emu.frameadvance()
 
@@ -20,10 +24,11 @@ return function()
 	--when the script finishes, make sure to close the connection
 	local function close_connection()
 	  client_socket:close()
-	  console.log("Connection closed.")
+	  printOutput("Connection closed.")
+	  cleanConnection()
 	end
 
-	event.onexit(close_connection)
+	event.onexit(function () close_connection(); forms.destroy(form1) end)
 
 	--furthermore, override error with a function that closes the connection
 	--before the error is actually thrown
@@ -31,10 +36,12 @@ return function()
 
 	error = function(message, level)
 	  close_connection()
-	  old_error(message, 0)
+	  printOutput(message)
+	  --old_error(message, 0)
 	end
 
 	--sync the gameplay
+	sync.initialize()
 	sync.syncconfig(client_socket, 2)
 	sync.synctoframe1(client_socket)
 	sync.resetsync()

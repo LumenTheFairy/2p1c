@@ -2,43 +2,39 @@
 --author: TheOnlyOne
 local sync = {}
 
-
-
---load configurations
-local config = require("config")
-
 local require_status, modify_inputs, display_inputs
---attempt to load the desired input modifier. If it does not exist, load the
---default modifier
-require_status, modify_inputs = pcall(function()
-  return require(config.input_modifier)
-end)
-if not require_status then
-  console.log("The input modifier specified in config.lua could not be found.")
-  console.log("Loading the default input modifier instead.")
-  config.input_modifier = "inputmodifier_none"
-  modify_inputs = require("inputmodifier_none")
-end
---attempt to load the desired input display. If it does not exist, load the
---default display
-require_status, display_inputs = pcall(function()
-  return require(config.input_display)
-end)
-if not require_status then
-  console.log("The input diplay specified in config.lua could not be found.")
-  console.log("Loading the default input diplay instead.")
-  config.input_display = "inputdisplay_none"
-  display_inputs = require("inputdisplay_none")
+
+function sync.initialize() 
+  --attempt to load the desired input modifier. If it does not exist, load the
+  --default modifier
+  require_status, modify_inputs = pcall(function()
+    return require(config.input_modifier)
+  end)
+  if not require_status then
+    printOutput("The input modifier specified in config.lua could not be found.")
+    printOutput("Loading the default input modifier instead.")
+    config.input_modifier = "inputmodifier_none"
+    modify_inputs = require("inputmodifier_none")
+  end
+  --attempt to load the desired input display. If it does not exist, load the
+  --default display
+  require_status, display_inputs = pcall(function()
+    return require(config.input_display)
+  end)
+  if not require_status then
+    printOutput("The input diplay specified in config.lua could not be found.")
+    printOutput("Loading the default input diplay instead.")
+    config.input_display = "inputdisplay_none"
+    display_inputs = require("inputdisplay_none")
+  end
 end
 
 local messenger = require("messenger")
 local savestate_sync = require("savestate_sync")
 
-
-
 --makes sure that configurations are consistent between the two players
 function sync.syncconfig(client_socket, default_player)
-  console.log("Checking that configurations are consistent (this may take a few seconds...)")
+  printOutput("Checking that configurations are consistent (this may take a few seconds...)")
   emu.frameadvance()
   emu.frameadvance()
 
@@ -74,37 +70,37 @@ function sync.syncconfig(client_socket, default_player)
 
   --check players
   if (config.player == their_player) then
-    console.log("Both players have choosen the same player number.")
-    console.log("Setting you to player " .. default_player .. ".")
+    printOutput("Both players have choosen the same player number.")
+    printOutput("Setting you to player " .. default_player .. ".")
     config.player = default_player
   elseif (config.player < 1 or config.player > 2) then
-    console.log("Your player number is not 1 or 2.")
-    console.log("Setting you to player " .. default_player .. ".")
+    printOutput("Your player number is not 1 or 2.")
+    printOutput("Setting you to player " .. default_player .. ".")
     config.player = default_player
   elseif (their_player < 1 or their_player > 2) then
-    console.log("Their player number is not 1 or 2.")
-    console.log("Setting you to player " .. default_player .. ".")
+    printOutput("Their player number is not 1 or 2.")
+    printOutput("Setting you to player " .. default_player .. ".")
     config.player = default_player
   end
 
   --check latency
   if (config.latency ~= their_latency) then
-    console.log("Your latencies do not match!")
+    printOutput("Your latencies do not match!")
     config.latency = math.max(config.latency, their_latency)
-    console.log("Setting latency to " .. config.latency .. ".")
+    printOutput("Setting latency to " .. config.latency .. ".")
   end
 
   --check input modifiers
   if (modifier_hash ~= their_modifier_hash) then
-    console.log("You are not both using the same input modifier.")
-    console.log("Make sure your input modifiers are the same and try again.")
+    printOutput("You are not both using the same input modifier.")
+    printOutput("Make sure your input modifiers are the same and try again.")
     error("Configuration consistency check failed.")
   end
 
   --check sync code
   if (sync_hash ~= their_sync_hash) then
-    console.log("You are not both using the same sync code (perhaps one of you is using an older version?)")
-    console.log("Make sure your sync code is the same and try again.")
+    printOutput("You are not both using the same sync code (perhaps one of you is using an older version?)")
+    printOutput("Make sure your sync code is the same and try again.")
     error("Configuration consistency check failed.")
   end
 end
@@ -119,7 +115,7 @@ function sync.synctoframe1(client_socket)
     error(err .. "\nFailed to sync.")
   end
   savestate.loadslot(0)
-  console.log("Synced! Let the games begin!")
+  printOutput("Synced! Let the games begin!")
   emu.frameadvance()
 end
 
@@ -127,6 +123,7 @@ local my_input_queue = {}
 local their_input_queue = {}
 local modifier_state_queue = {}
 local save_queue = {}
+local pause_queue = {}
 local current_input, received_input
 local received_message_type, received_data
 local received_frame
@@ -156,13 +153,8 @@ function sync.resetsync()
       my_input_queue[i] = {}
       their_input_queue[i] = {}
     end
-
-    current_input, received_input
-    received_message_type, received_data
-    received_frame
-    my_input, their_input, final_input
-    pause_type, unpause_type, unpause_data
 end
+
 
 --shares the input between two players, making sure that the same input is
 --pressed for both players on every frame
@@ -173,30 +165,47 @@ function sync.syncallinput(client_socket)
   --get the player input
   current_input = controller.get(keymap)
 
-  --pause if pause was pressed
-  if (current_input["PAUSE"] == true) then
-    --request the other player to pause
-    messenger.send(client_socket, messenger.PAUSE, "request")
-    --read input until the request is accepted
-    received_message_type = -1
-    while 1 do
-      received_message_type, received_data = messenger.receive(client_socket)
-      if (received_message_type == messenger.INPUT) then
-        --we received input
-        received_input = received_data[1]
-        received_frame = received_data[2]
+  if sendMessage["Pause"] == true then
+    sendMessage["Pause"] = nil
+    messenger.send(client_socket, messenger.PAUSE, future_frame)
+    pause_queue[future_frame] = "request"
+  end
 
-        --add the input to the queue
-        their_input_queue[received_frame] = received_input
-      elseif (received_message_type == messenger.PAUSE) then
-        if (received_data[1] == "accept") then
-          break
-        else
-          error("The other player did not properly accept the pause.")
-        end
-      else
-        error("Unexpected message type received.")
-      end
+  if sendMessage["Quit"] == true then 
+    sendMessage["Quit"] = nil
+    messenger.send(client_socket, messenger.QUIT)
+
+    syncStatus = "Idle"
+    client.unpause()
+    error("You closed the connection.")
+    return
+  end
+
+  if sendMessage["Save"] ~= nil then 
+    local i = sendMessage["Save"]
+    sendMessage["Save"] = nil
+
+    messenger.send(client_socket, messenger.SAVE, i, future_frame)
+    save_queue[future_frame] = i
+  end
+
+  if sendMessage["Load"] ~= nil then 
+    local i = sendMessage["Load"]
+    sendMessage["Load"] = nil
+
+    messenger.send(client_socket, messenger.LOAD, i)
+
+    --check if the state can be loaded
+    local status, err = savestate_sync.is_safe_to_loadslot(client_socket, i)
+    if (not status) then
+      --if not, continue on normally
+      printOutput(err)
+      printOutput("Did not load slot " .. i .. ".")
+    else
+      --if so, load the state, and reset necessary variables
+      savestate.loadslot(slot)
+      printOutput("Savestate slot " .. i .. " loaded.")
+      sync.resetsync()
     end
   end
 
@@ -217,46 +226,36 @@ function sync.syncallinput(client_socket)
       --add the input to the queue
       their_input_queue[received_frame] = received_input
     elseif (received_message_type == messenger.PAUSE) then
-      pause_type = received_data[1]
-      if (pause_type == "request") then
-        --the other player pressed pause, aknowledge, and pause
-        messenger.send(client_socket, messenger.PAUSE, "accept")
-        unpause_type, unpause_data = pausing.pausewait(client_socket)
+      pause_queue[received_data[1]] = "accept"
+    elseif (received_message_type == messenger.QUIT) then
+      syncStatus = "Idle"
+      client.unpause()
+      error("The other player quit.")    
+      return
+    elseif (received_message_type == messenger.MODIFIER) then
+      modifier_state_queue[received_data[2]] = received_data[1]
+      if (received_data[1]) then
+        printOutput("Input modifier is ON.")
       else
-        console.log("Something weird happened, but it should be okay.")
+        printOutput("Input modifier is OFF.")
       end
-      if (unpause_type == messenger.UNPAUSE) then
-        console.log("Unpaused.")
-      elseif (unpause_type == messenger.QUIT) then
-        console.log("The other player quit.")
+    elseif (received_message_type == messenger.LOAD) then
+      local slot = received_data[1]
+      --check if the state can be loaded
+      local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
+      if (not status) then
+        --if not, continue on normally
+        printOutput(err)
+        printOutput("Did not load slot " .. slot .. ".")
+      else
+        --if so, load the state, and reset necessary variables
+        savestate.loadslot(slot)
+        printOutput("Savestate slot " .. slot .. " loaded.")
+        sync.resetsync()
         return
-      elseif (unpause_type == messenger.MODIFIER) then
-        modifier_state_queue[unpause_data[2]] = unpause_data[1]
-        if (unpause_data[1]) then
-          console.log("Input modifier is ON.")
-        else
-          console.log("Input modifier is OFF.")
-        end
-      elseif (unpause_type == messenger.LOAD) then
-        local slot = unpause_data[1]
-        --check if the state can be loaded
-        local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
-        if (not status) then
-          --if not, continue on normally
-          console.log(err)
-          console.log("Did not load slot " .. slot .. ".")
-        else
-          --if so, load the state, and reset necessary variables
-          savestate.loadslot(slot)
-          console.log("Savestate slot " .. slot .. " loaded.")
-          sync.resetsync()
-          return
-        end
-      elseif (unpause_type == messenger.SAVE) then
-        save_queue[unpause_data[2]] = unpause_data[1]
-      else
-        error("Unexpected message type received.")
       end
+    elseif (received_message_type == messenger.SAVE) then
+      save_queue[received_data[2]] = received_data[1]
     else
       error("Unexpected message type received.")
     end
@@ -289,6 +288,19 @@ function sync.syncallinput(client_socket)
   --set the input
   joypad.set(final_input)
 
+  if (pause_queue[current_frame] ~= nil) then
+    if pause_queue[current_frame] == "accept" then
+      printOutput("The other player has paused.")
+    else
+      printOutput("You have paused.")
+    end
+
+    syncStatus = "Pause"
+    client.pause()
+
+    pause_queue[current_frame] = nil
+  end
+
   --clear these entries to keep the queue size from growing
   my_input_queue[current_frame] = nil
   their_input_queue[current_frame] = nil
@@ -296,14 +308,54 @@ function sync.syncallinput(client_socket)
   --make a save state if requested
   if (save_queue[current_frame] ~= nil) then
     savestate.saveslot(save_queue[current_frame])
-    console.log("Saved state to slot " .. save_queue[current_frame] .. ".")
+    printOutput("Saved state to slot " .. save_queue[current_frame] .. ".")
+    save_queue[current_frame] = nil
   end
 end
 
 
 function sync.syncpause(client_socket)
-  status, received_message_type, received_data = pcall(messenger.receive(client_socket))
-  if not status then
+  if sendMessage["Unpause"] == true then
+    sendMessage["Unpause"] = nil
+    printOutput("You unpaused.") 
+    messenger.send(client_socket, messenger.UNPAUSE)
+    client.unpause()
+    syncStatus = "Play"
+    return
+  end
+
+  if sendMessage["Save"] ~= nil then 
+    local i = sendMessage["Save"]
+    sendMessage["Save"] = nil
+
+    messenger.send(client_socket, messenger.SAVE, i, future_frame)
+
+    savestate.saveslot(i)
+    printOutput("Saved state to slot " .. i .. ".")
+  end
+
+  if sendMessage["Load"] ~= nil then 
+    local i = sendMessage["Load"]
+    sendMessage["Load"] = nil
+
+    messenger.send(client_socket, messenger.LOAD, i)
+
+    --check if the state can be loaded
+    local status, err = savestate_sync.is_safe_to_loadslot(client_socket, i)
+    if (not status) then
+      --if not, continue on normally
+      printOutput(err)
+      printOutput("Did not load slot " .. i .. ".")
+    else
+      --if so, load the state, and reset necessary variables
+      savestate.loadslot(slot)
+      printOutput("Savestate slot " .. i .. " loaded.")
+      sync.resetsync()
+    end
+  end
+
+  received_message_type, received_data = messenger.receive(client_socket, true)
+  if received_message_type == nil then
     return
   end
 
@@ -314,45 +366,40 @@ function sync.syncpause(client_socket)
 
     --add the input to the queue
     their_input_queue[received_frame] = received_input
-  elseif (received_message_type == messenger.PAUSE) then
-    pause_type = received_data[1]
-    if (unpause_type == messenger.UNPAUSE) then
-      console.log("Unpaused.")
-      syncStatus = "Play"
-    elseif (unpause_type == messenger.QUIT) then
-      console.log("The other player quit.")
-      syncStatus = "Idle"
-      client_socket:close()
-      client_socket = nil
-    elseif (unpause_type == messenger.MODIFIER) then
-      modifier_state_queue[unpause_data[2]] = unpause_data[1]
-      if (unpause_data[1]) then
-        console.log("Input modifier is ON.")
-      else
-        console.log("Input modifier is OFF.")
-      end
-    elseif (unpause_type == messenger.LOAD) then
-      local slot = unpause_data[1]
-      --check if the state can be loaded
-      client_socket:settimeout(config.input_timeout)
-      local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
-      client_socket:settimeout(0)
-      if (not status) then
-        --if not, continue on normally
-        console.log(err)
-        console.log("Did not load slot " .. slot .. ".")
-      else
-        --if so, load the state, and reset necessary variables
-        savestate.loadslot(slot)
-        console.log("Savestate slot " .. slot .. " loaded.")
-        sync.resetsync()
-        return
-      end
-    elseif (unpause_type == messenger.SAVE) then
-      save_queue[unpause_data[2]] = unpause_data[1]
+  elseif (received_message_type == messenger.UNPAUSE) then
+    printOutput("The other player unpaused.")
+    syncStatus = "Play"
+    client.unpause()
+  elseif (received_message_type == messenger.QUIT) then
+    syncStatus = "Idle"
+    client.unpause()
+    error("The other player quit.")    
+    return
+  elseif (received_message_type == messenger.MODIFIER) then
+    modifier_state_queue[received_data[2]] = received_data[1]
+    if (received_data[1]) then
+      printOutput("Input modifier is ON.")
     else
-      error("Unexpected message type received.")
+      printOutput("Input modifier is OFF.")
     end
+  elseif (received_message_type == messenger.LOAD) then
+    local slot = received_data[1]
+    --check if the state can be loaded
+    local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
+    if (not status) then
+      --if not, continue on normally
+      printOutput(err)
+      printOutput("Did not load slot " .. slot .. ".")
+    else
+      --if so, load the state, and reset necessary variables
+      savestate.loadslot(slot)
+      printOutput("Savestate slot " .. slot .. " loaded.")
+      sync.resetsync()
+      return
+    end
+  elseif (received_message_type == messenger.SAVE) then
+    savestate.saveslot(received_data[1])
+    printOutput("Saved state to slot " .. received_data[1] .. ".")
   else
     error("Unexpected message type received.")
   end
