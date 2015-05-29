@@ -1,32 +1,40 @@
-config = require("config")
+config = dofile("config.lua")
 local sync = require("sync")
+config.input_display_enabled = true
+config.modify_inputs_enabled = true
 
 local guiClick = {}
 
 event.onexit(function() forms.destroy(form1) end)
 
 function printOutput(str) 
-	outputtext = outputtext .. str .. "\r\n"
-	flushOutput()
+	local outputtext = forms.gettext(text1)
+	outputtext = "[" .. os.date("%H:%M:%S", os.time()) .. "] " .. str .. "\r\n" .. outputtext
+	forms.settext(text1, outputtext)
 end
 
 function updateGUI()
 	forms.settext(txbIP, config.hostname)
 	forms.settext(txbPort, config.port)
 	forms.settext(txbModifyInputs, config.input_modifier)
+	forms.settext(txbInputDisplay, config.input_display)
 
-	if config.player == 1 then
-		forms.setproperty(chkPlayer1, "Checked", true)
-		forms.setproperty(chkPlayer2, "Checked", false)
-	else
-		forms.setproperty(chkPlayer1, "Checked", false)
-		forms.setproperty(chkPlayer2, "Checked", true)
-	end
+	forms.setproperty(chkPlayer1, "Checked", config.player == 1)
+	forms.setproperty(chkPlayer2, "Checked", config.player == 2)
 
-	if config.input_display ~= "inputdisplay_none" then
-		forms.setproperty(chkInputDisplay, "Checked", true)
-	elseif config.input_display_temp == nil then
+	forms.setproperty(chkInputDisplay, "Checked", config.input_display_enabled)
+	forms.setproperty(chkModifyInputs, "Checked", config.modify_inputs_enabled)
+
+	if config.input_display == "inputdisplay_none.lua" then
 		forms.setproperty(chkInputDisplay, "Enabled", false)
+	else
+		forms.setproperty(chkInputDisplay, "Enabled", true)
+	end	
+
+	if (config.input_modifier == "inputmodifier_none.lua" or syncStatus == "Idle") then
+		forms.setproperty(chkModifyInputs, "Enabled", false)
+	else
+		forms.setproperty(chkModifyInputs, "Enabled", true)
 	end	
 
 	if syncStatus == "Pause" then
@@ -39,38 +47,36 @@ function updateGUI()
 		forms.setproperty(txbIP, "Enabled", true)
 		forms.setproperty(txbPort, "Enabled", true)
 		forms.setproperty(txbModifyInputs, "Enabled", true)
+		forms.setproperty(txbInputDisplay, "Enabled", true)
 		forms.setproperty(chkPlayer1, "Enabled", true)
 		forms.setproperty(chkPlayer2, "Enabled", true)
 		forms.setproperty(btnHost, "Enabled", true)
 		forms.setproperty(btnClient, "Enabled", true)
 		forms.setproperty(btnFrame0, "Enabled", true)
+		forms.setproperty(btnLoadConfig, "Enabled", true)
 		forms.setproperty(btnPause, "Enabled", false)
 		forms.settext(btnQuit, "Quit 2P1C")	
 
-		for k,v in pairs(save_handles) do
-			forms.setproperty(k, "Enabled", false)
-		end
-		for k,v in pairs(load_handles) do
-			forms.setproperty(k, "Enabled", false)
-		end
+		forms.setproperty(ddnSaveSlot, "Enabled", false)
+		forms.setproperty(btnSaveSlot, "Enabled", false)
+		forms.setproperty(btnLoadSlot, "Enabled", false)
 	else
 		forms.setproperty(txbIP, "Enabled", false)
 		forms.setproperty(txbPort, "Enabled", false)
 		forms.setproperty(txbModifyInputs, "Enabled", false)
+		forms.setproperty(txbInputDisplay, "Enabled", false)
 		forms.setproperty(chkPlayer1, "Enabled", false)
 		forms.setproperty(chkPlayer2, "Enabled", false)
 		forms.setproperty(btnHost, "Enabled", false)
 		forms.setproperty(btnClient, "Enabled", false)
 		forms.setproperty(btnFrame0, "Enabled", false)
+		forms.setproperty(btnLoadConfig, "Enabled", false)
 		forms.setproperty(btnPause, "Enabled", true)
 		forms.settext(btnQuit, "End Sync")	
 
-		for k,v in pairs(save_handles) do
-			forms.setproperty(k, "Enabled", true)
-		end
-		for k,v in pairs(load_handles) do
-			forms.setproperty(k, "Enabled", true)
-		end	
+		forms.setproperty(ddnSaveSlot, "Enabled", true)
+		forms.setproperty(btnSaveSlot, "Enabled", true)
+		forms.setproperty(btnLoadSlot, "Enabled", true)
 	end
 end
 
@@ -79,12 +85,6 @@ function cleanConnection()
 	client_socket = nil
 
 	updateGUI()
-end
-
-local text1
-outputtext = ""
-function flushOutput() 
-	forms.settext(text1, outputtext)
 end
 
 function frame0()
@@ -114,19 +114,16 @@ function changePlayer2()
 end
 
 function toggleInputDisplay()
-	if config.input_display ~= "inputdisplay_none" then
-		config.input_display_temp = config.input_display
-		config.input_display = "inputdisplay_none"
-	elseif config.input_display_temp ~= nil then
-		config.input_display = config.input_display_temp
-		config.input_display_temp = nil
-	end
+	config.input_display = forms.gettext(txbInputDisplay)
+	config.input_display_enabled = not config.input_display_enabled
 end
 
 function prepareConnection()
 	config.hostname = forms.gettext(txbIP)
 	config.port = forms.gettext(txbPort)
 	config.input_modifier = forms.gettext(txbModifyInputs)
+	config.input_display = forms.gettext(txbInputDisplay)
+	
 	forms.setproperty(txbIP, "Enabled", false)
 	forms.setproperty(txbPort, "Enabled", false)
 	forms.setproperty(txbModifyInputs, "Enabled", false)
@@ -156,6 +153,88 @@ function quit2P1C()
 	end
 end
 
+function saveSlot()
+	sendMessage["Save"] = tonumber(forms.gettext(ddnSaveSlot))
+end
+
+function loadConfig()
+	config = dofile("config.lua")
+	config.input_display_enabled = true
+	config.modify_inputs_enabled = true
+
+	updateGUI()
+end
+
+function saveConfig()
+	config.hostname = forms.gettext(txbIP)
+	config.port = forms.gettext(txbPort)
+	config.input_modifier = forms.gettext(txbModifyInputs)
+	config.input_display = forms.gettext(txbInputDisplay)
+
+	local output = [[
+local config = {}
+
+--This determines which player you are. This is mainly used in input modifiers
+--and input displays. Valid player numbers are 1 and 2. Make sure this is the
+--other number from the person you are playing with.
+config.player = ]] .. config.player .. [[
+
+
+--This is the amount of time, in seconds, that the host will wait for the
+--client to connect. If this timeout is reached, the host script will end.
+--This value is only inportant for the host.
+config.accept_timeout = ]] .. config.accept_timeout .. [[
+
+
+--This is the amount of time, in seconds, that the input syncer will wait
+--for the other player's input. If this timeout is reached, the connection
+--will end, so a low timeout may ruin syncing if one player pauses emulation,
+--has a slowdown in emulation, or has a slowdown in connection speed.
+config.input_timeout = ]] .. config.input_timeout .. [[
+
+
+--This is the port the connection will happen over. Make sure this is the same
+--for both players before trying to sync.
+config.port = ]] .. config.port .. [[
+
+
+--This is the ip address or hostname of the player running host.lua (ip
+--addresses should should still be in quotes.) This value is only inportant
+--for the client.
+config.hostname = "]] .. config.hostname .. [["
+
+--This is the number of frames the network has to send the inputs back and
+--forth. It is also the number of frames that all input will be delayed. If
+--this is too low, the gameplay will be very slow and choppy due to the fact
+--that the players must wait to recieve the other's input. If this is too high,
+--there will be noticable input delay.
+config.latency = ]] .. config.latency .. [[
+
+
+--This is the file name (without the .lua extension) of the lua script that
+--contains the input modifier you wish to use. If you do not wish to run any
+--input modification, set this to "inputmodifier_none".
+config.input_modifier = "]] .. config.input_modifier .. [["
+
+--This is the file name (without the .lua extension) of the lua script that
+--contains the input display code wish to use. If you do not wish to display
+--input, set this to "inputdisplay_none".
+config.input_display = "]] .. config.input_display .. [["
+
+--This is the path from directory containing the sync scripts to BizHawk's root
+--directory (the directory where the EmuHawk executable is found.) This is used
+--when creating and loading savestates.
+config.path_to_root = "../../"
+
+
+return config
+]]
+
+	f = assert(io.open("config.lua", "w"))
+	f:write(output)
+	f:close()
+end
+
 local keymapfunc = require("setkeymap")
 local hostfunc = require("host")
 local clientfunc = require("client")
@@ -167,80 +246,113 @@ forms.setproperty(form1, "ControlBox", false)
 text1 = forms.textbox(form1, "", 260, 325, nil, 290, 10, true, false)
 forms.setproperty(text1, "ReadOnly", true)
 
-btnFrame0 = forms.button(form1, "Initialize", frame0, 10, 50, 80, 30)
 btnKeymap = forms.button(form1, "Set Controls", function() guiClick["setkeymap"] = keymapfunc end, 10, 10, 80, 30)
-btnQuit = forms.button(form1, "Quit 2P1C", quit2P1C, 190, 10, 80, 30)
-btnHost = forms.button(form1, "Host", function() prepareConnection(); guiClick["host"] = hostfunc end, 100, 50, 80, 30)
-btnClient = forms.button(form1, "Client", function() prepareConnection(); guiClick["client"] = clientfunc end, 190, 50, 80, 30)
 btnPause = forms.button(form1, "Pause", togglePause, 100, 10, 80, 30)
+btnQuit = forms.button(form1, "Quit 2P1C", quit2P1C, 190, 10, 80, 30)
 forms.setproperty(btnPause, "Enabled", false)
+
+btnFrame0 = forms.button(form1, "Initialize", frame0, 10, 50, 80, 30)
+btnHost = forms.button(form1, "Host", function() prepareConnection(); guiClick["Host Server"] = hostfunc end, 100, 50, 80, 30)
+btnClient = forms.button(form1, "Join", function() prepareConnection(); guiClick["Join Server"] = clientfunc end, 190, 50, 80, 30)
 
 txbIP = forms.textbox(form1, "", 170, 20, nil, 10, 110, false, false)
 lblIP = forms.label(form1, "Host IP (Client only):", 15, 95, 130, 20)
 txbPort = forms.textbox(form1, "", 80, 20, "UNSIGNED", 190, 110, false, false)
 lblPort = forms.label(form1, "Port:", 195, 95, 130, 20)
-txbModifyInputs = forms.textbox(form1, "", 260, 20, nil, 10, 155, false, false)
+
+txbModifyInputs = forms.textbox(form1, "", 195, 20, nil, 10, 155, false, false)
 lblModifyInputs = forms.label(form1, "Input Modifier:", 15, 140, 130, 20)
-chkInputDisplay = forms.checkbox(form1, "Input Display", 190, 190)
-chkPlayer2 = forms.checkbox(form1, "Player 2", 80, 190)
-chkPlayer1 = forms.checkbox(form1, "Player 1", 10, 190)
+chkModifyInputs = forms.checkbox(form1, "Enable", 215, 154)
+
+txbInputDisplay = forms.textbox(form1, "", 195, 20, nil, 10, 200, false, false)
+lblInputDisplay = forms.label(form1, "Input Display:", 15, 185, 130, 20)
+chkInputDisplay = forms.checkbox(form1, "Enable", 215, 199)
+
+chkPlayer2 = forms.checkbox(form1, "2", 180, 235)
+chkPlayer1 = forms.checkbox(form1, "1", 145, 235)
+lblPlayer = forms.label(form1, "Select Player:", 65, 239, 150, 30)
 
 forms.addclick(chkPlayer1, changePlayer1)
 forms.addclick(chkPlayer2, changePlayer2)
+forms.addclick(chkModifyInputs, function() sendMessage["ModifyInputs"] = not forms.ischecked(chkModifyInputs) end)
 forms.addclick(chkInputDisplay, toggleInputDisplay)
 
---create buttons to load a savestate slot
-save_handles = {}
-local lblSaveSlot = forms.label(form1, "Save to savestate slot:", 5, 230, 130, 20)
-for i = 1,9 do
-    save_handles[forms.button(form1, "" .. i, function() sendMessage["Save"] = i end, 30 * i - 20, 250, 20, 25)] = true
-end
+btnSaveSlot = forms.button(form1, "Save", function() sendMessage["Save"] = tonumber(forms.gettext(ddnSaveSlot)) end, 160, 273, 50, 23)
+btnLoadSlot = forms.button(form1, "Load", function() sendMessage["Load"] = tonumber(forms.gettext(ddnSaveSlot)) end, 220, 273, 50, 23)
+ddnSaveSlot = forms.dropdown(form1, {"1", "2", "3", "4", "5", "6", "7", "8", "9"}, 120, 274, 30, 20)
+lblSaveSlot = forms.label(form1, "Select savestate slot:", 10, 277, 200, 30)
 
---create buttons to save to a savestate slot
-load_handles = {}
-local lblLoadSlot = forms.label(form1, "Load from savestate slot:", 5, 290, 130, 20)
-for i = 1,9 do
-    load_handles[forms.button(form1, "" .. i, function() sendMessage["Load"] = i end, 30 * i - 20, 310, 20, 25)] = true
-end
+
+btnSaveConfig = forms.button(form1, "Save Settings", function() guiClick["Save Settings"] = saveConfig end, 10, 310, 125, 25)
+btnLoadConfig = forms.button(form1, "Discard Changes", function() guiClick["Discard Changes"] = loadConfig end, 145, 310, 125, 25)
+
+
+
+
+
 
 sendMessage = {}
 syncStatus = "Idle"
 local prev_syncStatus = "Idle"
+local prev_modify_inputs_enabled = true
 wclient_socket = nil
 
 updateGUI()
+
+local threads = {}
 
 while 1 do
 	if forms.gettext(form1) == "" then
 		return
 	end
 
-	if (prev_syncStatus ~= syncStatus) then
+	if (prev_syncStatus ~= syncStatus or prev_modify_inputs_enabled ~= config.modify_inputs_enabled) then
 		prev_syncStatus = syncStatus
+		prev_modify_inputs_enabled = config.modify_inputs_enabled
 		updateGUI()
 	end
 
 	for k,v in pairs(guiClick) do
-		local err = v()
-
-		if (err ~= nil) then
-			printOutput("Error during " .. k .. ": " .. err)
-		end
+		threads[coroutine.create(v)] = k
 	end
 	guiClick = {}
 
+	for k,v in pairs(threads) do
+		if coroutine.status(k) == "dead" then
+			threads[k] = nil
+		else
+			local status, err = coroutine.resume(k)
+			if (status == false) then
+				if (err ~= nil) then
+					printOutput("Error during " .. v .. ": " .. err)
+				else
+					printOutput("Error during " .. v .. ": No error message")
+				end
+			end						
+		end
+	end
+
 	if syncStatus == "Play" then
-		sync.syncallinput(client_socket)
+		local thread = coroutine.create(sync.syncallinput)
+		local status, err = coroutine.resume(thread, client_socket)
+
+		if (status == false and err ~= nil) then
+			printOutput("Error during sync inputs (Play): " .. err)
+		end
 	end
 
 	if syncStatus == "Pause" then
-		sync.syncpause(client_socket)
+		local thread = coroutine.create(sync.syncpause)
+		local status, err = coroutine.resume(thread, client_socket)
+
+		if (status == false and err ~= nil) then
+			printOutput("Error during sync inputs (Pause): " .. err)
+		end
+
 		emu.yield()
 	else
 		emu.frameadvance()		
 	end
-
-	flushOutput()
 
 	--clear all input so that actual inputs do not interfere
   	joypad.set(controller.unset)

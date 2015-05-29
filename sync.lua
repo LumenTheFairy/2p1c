@@ -8,24 +8,24 @@ function sync.initialize()
   --attempt to load the desired input modifier. If it does not exist, load the
   --default modifier
   require_status, modify_inputs = pcall(function()
-    return require(config.input_modifier)
+    return dofile(config.input_modifier)
   end)
   if not require_status then
     printOutput("The input modifier specified in config.lua could not be found.")
     printOutput("Loading the default input modifier instead.")
-    config.input_modifier = "inputmodifier_none"
-    modify_inputs = require("inputmodifier_none")
+    config.input_modifier = "inputmodifier_none.lua"
+    modify_inputs = dofile("inputmodifier_none.lua")
   end
   --attempt to load the desired input display. If it does not exist, load the
   --default display
   require_status, display_inputs = pcall(function()
-    return require(config.input_display)
+    return dofile(config.input_display)
   end)
   if not require_status then
     printOutput("The input diplay specified in config.lua could not be found.")
     printOutput("Loading the default input diplay instead.")
-    config.input_display = "inputdisplay_none"
-    display_inputs = require("inputdisplay_none")
+    config.input_display = "inputdisplay_none.lua"
+    display_inputs = dofile("inputdisplay_none.lua")
   end
 end
 
@@ -35,13 +35,14 @@ local savestate_sync = require("savestate_sync")
 --makes sure that configurations are consistent between the two players
 function sync.syncconfig(client_socket, default_player)
   printOutput("Checking that configurations are consistent (this may take a few seconds...)")
-  emu.frameadvance()
-  emu.frameadvance()
+  coroutine.yield()
+  coroutine.yield()
+
 
   --construct a value representing the input modifier that is in use
   local sha1 = require("sha1")
   local modifier_text = ""
-  for line in io.lines(config.input_modifier .. ".lua") do modifier_text = modifier_text .. line .. "\n" end
+  for line in io.lines(config.input_modifier) do modifier_text = modifier_text .. line .. "\n" end
   local modifier_hash = sha1.sha1(modifier_text)
 
   --construct a value representing the sync code that is in use
@@ -49,7 +50,6 @@ function sync.syncconfig(client_socket, default_player)
   for line in io.lines("sync.lua") do sync_code = sync_code .. line .. "\n" end
   for line in io.lines("controller.lua") do sync_code = sync_code .. line .. "\n" end
   for line in io.lines("messenger.lua") do sync_code = sync_code .. line .. "\n" end
-  for line in io.lines("pausing.lua") do sync_code = sync_code .. line .. "\n" end
   local sync_hash = sha1.sha1(sync_code)
 
   --send the configuration
@@ -116,7 +116,7 @@ function sync.synctoframe1(client_socket)
   end
   savestate.loadslot(0)
   printOutput("Synced! Let the games begin!")
-  emu.frameadvance()
+  coroutine.yield()
 end
 
 local my_input_queue = {}
@@ -132,10 +132,8 @@ local pause_type, unpause_type, unpause_data
 
 local controller = require("controller")
 local keymap = require(controller.keymapfilename)
-local pausing = require("pausing")
 
 local current_frame, future_frame
-local modifier_is_in_effect = true
 local should_break = false
 
 function sync.resetsync()
@@ -181,6 +179,20 @@ function sync.syncallinput(client_socket)
     return
   end
 
+  if sendMessage["ModifyInputs"] ~= nil then 
+    local i = sendMessage["ModifyInputs"]
+    sendMessage["ModifyInputs"] = nil
+
+    modifier_state_queue[future_frame] = i
+    messenger.send(client_socket, messenger.MODIFIER, i, future_frame)
+    
+    if (i) then
+        printOutput("You turned input modifier ON.")
+      else
+        printOutput("You turned input modifier OFF.")
+      end
+  end
+
   if sendMessage["Save"] ~= nil then 
     local i = sendMessage["Save"]
     sendMessage["Save"] = nil
@@ -199,8 +211,7 @@ function sync.syncallinput(client_socket)
     local status, err = savestate_sync.is_safe_to_loadslot(client_socket, i)
     if (not status) then
       --if not, continue on normally
-      printOutput(err)
-      printOutput("Did not load slot " .. i .. ".")
+      printOutput("Did not load slot " .. i .. ": " .. err)
     else
       --if so, load the state, and reset necessary variables
       savestate.loadslot(slot)
@@ -235,9 +246,9 @@ function sync.syncallinput(client_socket)
     elseif (received_message_type == messenger.MODIFIER) then
       modifier_state_queue[received_data[2]] = received_data[1]
       if (received_data[1]) then
-        printOutput("Input modifier is ON.")
+        printOutput("The other player turned input modifier ON.")
       else
-        printOutput("Input modifier is OFF.")
+        printOutput("The other player turned input modifier OFF.")
       end
     elseif (received_message_type == messenger.LOAD) then
       local slot = received_data[1]
@@ -245,8 +256,7 @@ function sync.syncallinput(client_socket)
       local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
       if (not status) then
         --if not, continue on normally
-        printOutput(err)
-        printOutput("Did not load slot " .. slot .. ".")
+        printOutput("Did not load slot " .. slot .. ": " .. err)
       else
         --if so, load the state, and reset necessary variables
         savestate.loadslot(slot)
@@ -268,14 +278,16 @@ function sync.syncallinput(client_socket)
 
   --switch effect of modifier if necessary
   if (modifier_state_queue[current_frame] ~= nil) then
-    modifier_is_in_effect = modifier_state_queue[current_frame]
+    config.modify_inputs_enabled = modifier_state_queue[current_frame]
   end
 
-  if (modifier_is_in_effect) then
+  if (config.modify_inputs_enabled) then
     my_input, their_input = modify_inputs(my_input, their_input, config.player)
   end
 
-  display_inputs(my_input, their_input, config.player)
+  if config.input_display_enabled then
+    display_inputs(my_input, their_input, config.player)
+  end
 
   for i, b in pairs(controller.buttons) do
     if (my_input[b] == true or their_input[b] == true) then
@@ -324,6 +336,22 @@ function sync.syncpause(client_socket)
     return
   end
 
+  if sendMessage["ModifyInputs"] ~= nil then 
+    local i = sendMessage["ModifyInputs"]
+    sendMessage["ModifyInputs"] = nil
+
+    modifier_state_queue[future_frame] = i
+    messenger.send(client_socket, messenger.MODIFIER, i, future_frame)
+    
+    if (i) then
+      printOutput("You turned input modifier ON.")
+      printOutput("This will take effect after unpausing.")
+   else
+      printOutput("You turned input modifier OFF.")
+      printOutput("This will take effect after unpausing.")
+    end
+  end
+
   if sendMessage["Save"] ~= nil then 
     local i = sendMessage["Save"]
     sendMessage["Save"] = nil
@@ -344,8 +372,7 @@ function sync.syncpause(client_socket)
     local status, err = savestate_sync.is_safe_to_loadslot(client_socket, i)
     if (not status) then
       --if not, continue on normally
-      printOutput(err)
-      printOutput("Did not load slot " .. i .. ".")
+      printOutput("Did not load slot " .. i .. ": " .. err)
     else
       --if so, load the state, and reset necessary variables
       savestate.loadslot(slot)
@@ -377,10 +404,13 @@ function sync.syncpause(client_socket)
     return
   elseif (received_message_type == messenger.MODIFIER) then
     modifier_state_queue[received_data[2]] = received_data[1]
+
     if (received_data[1]) then
-      printOutput("Input modifier is ON.")
+      printOutput("The other player turned input modifier ON.")
+      printOutput("This will take effect after unpausing.")
     else
-      printOutput("Input modifier is OFF.")
+      printOutput("The other player turned input modifier OFF.")
+      printOutput("This will take effect after unpausing.")
     end
   elseif (received_message_type == messenger.LOAD) then
     local slot = received_data[1]
@@ -388,8 +418,7 @@ function sync.syncpause(client_socket)
     local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
     if (not status) then
       --if not, continue on normally
-      printOutput(err)
-      printOutput("Did not load slot " .. slot .. ".")
+      printOutput("Did not load slot " .. slot .. ": " .. err)
     else
       --if so, load the state, and reset necessary variables
       savestate.loadslot(slot)

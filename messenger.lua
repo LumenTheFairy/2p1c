@@ -47,7 +47,7 @@ local encode_message = {
     local my_input = data[1]
     local frame = data[2]
     --convert pressed buttons to a binary string
-    message = ""
+    local message = ""
     for i, b in pairs(controller.buttons) do
       if (my_input[b] == true) then
         message = message .. "1"
@@ -254,17 +254,17 @@ function messenger.receive(client_socket, nonblocking)
   end
 
   --get the next message
-  message = client_socket:receive()
+  local message = client_socket:receive()
 
   if nonblocking then
     client_socket:settimeout(config.input_timeout)
   end
 
   if(message == nil) then
-    if nonblocking then 
-      return nil
-    else
+    if not nonblocking then 
       error("Timed out waiting for a message from the other player (the other player may have disconnected.)")
+    else
+      return nil
     end
   end
   --determine message type

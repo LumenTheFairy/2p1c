@@ -13,8 +13,8 @@ return function()
 	server:settimeout(config.accept_timeout)
 	--wait for the connection from the client
 	printOutput("Awaiting connection.")
-	emu.frameadvance()
-	emu.frameadvance()
+	coroutine.yield()
+	coroutine.yield()
 	local err
 	client_socket, err = server:accept()
 
@@ -29,16 +29,20 @@ return function()
 	--display the client's information
 	local peername, peerport = client_socket:getpeername()
 	printOutput("Connected to " .. peername .. " on port " .. peerport)
-	emu.frameadvance()
-	emu.frameadvance()
+	coroutine.yield()
+	coroutine.yield()
 
 	-- make sure we don't block forever waiting for input
 	client_socket:settimeout(config.input_timeout)
 
 	--when the script finishes, make sure to close the connection
 	local function close_connection()
-	  client_socket:close()
-	  server:close()
+	  if (client_socket ~= nil) then
+	    client_socket:close()
+	  end
+	  if (server ~= nil) then
+	    server:close()
+	  end
 	  printOutput("Connection closed.")
 	  cleanConnection()
 	end
@@ -49,10 +53,9 @@ return function()
 	--before the error is actually thrown
 	local old_error = error
 
-	error = function(message, level)
+	error = function(str, level)
 	  close_connection()
-	  printOutput(message)
-	  --old_error(message, 0)
+	  old_error(str, 0)
 	end
 
 	--sync the gameplay
@@ -61,6 +64,7 @@ return function()
 	sync.synctoframe1(client_socket)
 	sync.resetsync()
 	
+	updateGUI()
 	syncStatus = "Play"
 	return 
 end

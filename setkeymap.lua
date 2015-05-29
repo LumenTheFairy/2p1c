@@ -5,7 +5,6 @@ controller = require("controller")
 return function()
 	local keymap = {}
 	local keylist = controller.buttons
-	table.insert(keylist, "PAUSE")
 
 	function getKey(t)
 		local key = nil
@@ -36,14 +35,14 @@ return function()
 	    	if timeout == 0 then
 	    		return
 	    	end
-	    	emu.frameadvance()
+	    	coroutine.yield()
 	    until (key ~= nil)
 
 	    repeat
 	    	gui.text(client.bufferheight() / 2, (client.bufferwidth() / 2),"Enter a key for " ..val)
 	    	keyPress = input.get()
 	    	
-	    	emu.frameadvance()
+	    	coroutine.yield()
 	    until (keyPress[key] == nil)    
 
 		keymap[key] = val
