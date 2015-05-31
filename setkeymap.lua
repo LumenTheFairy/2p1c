@@ -9,7 +9,7 @@ return function()
 	function getKey(t)
 		local key = nil
 		for k, v in pairs(t) do
-			if k ~= "WMouse L" then
+			if k ~= "WMouse L" and not string.find(k, "^J%d+ [^b]$") and k ~= "" then
 				if key == nil then
 					key = k
 				else
