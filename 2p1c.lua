@@ -1,7 +1,6 @@
 
 local guiClick = {}
 
-event.onexit(function() forms.destroy(form1) end)
 
 local form1, text1, btnKeymap, btnPause, btnQuit, btnFrame0, btnHost, btnClient
 local txbIP, lblIP, txbPort, lblPort
@@ -298,6 +297,7 @@ btnLoadConfig = forms.button(form1, "Discard Changes", function() guiClick["Disc
 
 
 
+event.onexit(function() forms.destroy(form1) end)
 
 
 sendMessage = {}
