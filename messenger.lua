@@ -105,11 +105,12 @@ local encode_message = {
     return message .. "," .. frame
   end,
 
-  --a save hash message expects 1 argument:
-  --the save hash number
+  --a save hash message expects 2 arguments:
+  --the savestate slot number and the save hash number
   [messenger.SAVE_HASH] = function(data)
-    local save_hash = data[1]
-    return save_hash
+    local slot = data[1]
+    local save_hash = data[2]
+    return slot .. "," .. save_hash
   end,
 
   --a load fail message expects 1 argument:
@@ -119,11 +120,12 @@ local encode_message = {
     return reason
   end,
 
-  --a load message expects 1 argument:
-  --the slot that should be loaded
+  --a load message expects 2 arguments:
+  --the slot that should be loaded and the frame to send the hash
   [messenger.LOAD] = function(data)
     local slot = data[1]
-    return "" .. slot
+    local future_frame = data[2]
+    return slot .. "," .. future_frame
   end,
 
   --a load message expects 2 arguments:
@@ -217,8 +219,9 @@ local decode_message = {
 
   [messenger.SAVE_HASH] = function(split_message)
     --get save hash from message
-    local their_save_hash = split_message[0]
-    return {their_save_hash}
+    local slot = tonumber(split_message[0])
+    local their_save_hash = split_message[1]
+    return {slot, their_save_hash}
   end,
 
   [messenger.LOAD_FAIL] = function(split_message)
@@ -231,7 +234,8 @@ local decode_message = {
     --get slot from message
     local slot_message = split_message[0]
     local their_slot = tonumber(slot_message)
-    return {their_slot}
+    local future_frame = tonumber(split_message[1])
+    return {their_slot, future_frame}
   end,
 
   [messenger.SAVE] = function(split_message)

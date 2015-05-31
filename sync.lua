@@ -112,7 +112,7 @@ end
 function sync.synctoframe1(client_socket)
   local status, err = savestate_sync.is_safe_to_loadslot(client_socket, 0)
   if (not status) then
-    error(err .. "\nFailed to sync.")
+    error("Failed to sync.\n" .. err)
   end
   savestate.loadslot(0)
   printOutput("Synced! Let the games begin!")
@@ -123,6 +123,7 @@ local my_input_queue = {}
 local their_input_queue = {}
 local modifier_state_queue = {}
 local save_queue = {}
+local load_queue = {}
 local pause_queue = {}
 local current_input, received_input
 local received_message_type, received_data
@@ -145,6 +146,8 @@ function sync.resetsync()
     their_input_queue = {}
     modifier_state_queue = {}
     save_queue = {}
+    load_queue = {}
+    pause_queue = {}
 
     --set the first latency frames to no input
     for i = current_frame, (future_frame - 1) do
@@ -205,18 +208,11 @@ function sync.syncallinput(client_socket)
     local i = sendMessage["Load"]
     sendMessage["Load"] = nil
 
-    messenger.send(client_socket, messenger.LOAD, i)
-
-    --check if the state can be loaded
-    local status, err = savestate_sync.is_safe_to_loadslot(client_socket, i)
-    if (not status) then
-      --if not, continue on normally
-      printOutput("Did not load slot " .. i .. ": " .. err)
+    if (savestate_hashes[i] == nil) then
+      printOutput("Savestate slot " .. i .. " does not exist.")
     else
-      --if so, load the state, and reset necessary variables
-      savestate.loadslot(slot)
-      printOutput("Savestate slot " .. i .. " loaded.")
-      sync.resetsync()
+      load_queue[future_frame] = i
+      messenger.send(client_socket, messenger.LOAD, i, future_frame)
     end
   end
 
@@ -252,18 +248,32 @@ function sync.syncallinput(client_socket)
       end
     elseif (received_message_type == messenger.LOAD) then
       local slot = received_data[1]
-      --check if the state can be loaded
-      local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
-      if (not status) then
-        --if not, continue on normally
-        printOutput("Did not load slot " .. slot .. ": " .. err)
+
+      if (savestate_hashes[slot] == nil) then
+        local reason = "The other player attempted to load savestate slot " .. i .. ", but it does not exist for you."
+        printOutput(reason)
+        messenger.send(client_socket, messenger.LOAD_FAIL, reason)
       else
-        --if so, load the state, and reset necessary variables
+        load_queue[received_data[2]] = slot
+      end
+    elseif (received_message_type == messenger.SAVE_HASH) then
+      local slot = received_data[1]
+      local their_save_hash = received_data[2]
+      --check that the save states match
+      if (savestate_hashes[slot] == their_save_hash) then
         savestate.loadslot(slot)
         printOutput("Savestate slot " .. slot .. " loaded.")
         sync.resetsync()
+
+        --Skips the next advance frame
+        sync.syncallinput(client_socket)
         return
+      else
+        printOutput("Your saves at slot " .. slot .. " do not match!")
       end
+    elseif  (received_message_type == messenger.LOAD_FAIL) then
+      local their_reason = received_data[1]
+      printOutput("Other player would have an error loading:\n" .. their_reason)
     elseif (received_message_type == messenger.SAVE) then
       save_queue[received_data[2]] = received_data[1]
     else
@@ -323,17 +333,30 @@ function sync.syncallinput(client_socket)
     printOutput("Saved state to slot " .. save_queue[current_frame] .. ".")
     save_queue[current_frame] = nil
   end
+
+  --make a load state if requested
+  if (load_queue[current_frame] ~= nil) then
+    local slot = load_queue[current_frame]
+    if (savestate_hashes[slot] == nil) then
+      local reason = "Savestate file for slot " .. slot .. " does not exist."
+      printOutput(reason)
+      messenger.send(client_socket, messenger.LOAD_FAIL, reason)
+    else
+      messenger.send(client_socket, messenger.SAVE_HASH, slot, savestate_hashes[slot])
+    end
+    load_queue[current_frame] = nil
+  end
 end
 
 
 function sync.syncpause(client_socket)
   if sendMessage["Unpause"] == true then
     sendMessage["Unpause"] = nil
-    printOutput("You unpaused.") 
     messenger.send(client_socket, messenger.UNPAUSE)
+
+    printOutput("You unpaused.") 
     client.unpause()
     syncStatus = "Play"
-    return
   end
 
   if sendMessage["ModifyInputs"] ~= nil then 
@@ -345,11 +368,13 @@ function sync.syncpause(client_socket)
     
     if (i) then
       printOutput("You turned input modifier ON.")
-      printOutput("This will take effect after unpausing.")
    else
       printOutput("You turned input modifier OFF.")
-      printOutput("This will take effect after unpausing.")
     end
+
+    printOutput("You unpaused.") 
+    client.unpause()
+    syncStatus = "Play"
   end
 
   if sendMessage["Save"] ~= nil then 
@@ -357,27 +382,26 @@ function sync.syncpause(client_socket)
     sendMessage["Save"] = nil
 
     messenger.send(client_socket, messenger.SAVE, i, future_frame)
+    save_queue[future_frame] = i
 
-    savestate.saveslot(i)
-    printOutput("Saved state to slot " .. i .. ".")
+    printOutput("You unpaused.") 
+    client.unpause()
+    syncStatus = "Play"
   end
 
   if sendMessage["Load"] ~= nil then 
     local i = sendMessage["Load"]
     sendMessage["Load"] = nil
 
-    messenger.send(client_socket, messenger.LOAD, i)
-
-    --check if the state can be loaded
-    local status, err = savestate_sync.is_safe_to_loadslot(client_socket, i)
-    if (not status) then
-      --if not, continue on normally
-      printOutput("Did not load slot " .. i .. ": " .. err)
+    if (savestate_hashes[i] == nil) then
+      printOutput("Savestate slot " .. i .. " does not exist.")
     else
-      --if so, load the state, and reset necessary variables
-      savestate.loadslot(slot)
-      printOutput("Savestate slot " .. i .. " loaded.")
-      sync.resetsync()
+      messenger.send(client_socket, messenger.LOAD, i, future_frame) 
+      load_queue[future_frame] = i 
+
+      printOutput("You unpaused.") 
+      client.unpause()
+      syncStatus = "Play"
     end
   end
 
@@ -407,28 +431,56 @@ function sync.syncpause(client_socket)
 
     if (received_data[1]) then
       printOutput("The other player turned input modifier ON.")
-      printOutput("This will take effect after unpausing.")
     else
       printOutput("The other player turned input modifier OFF.")
-      printOutput("This will take effect after unpausing.")
     end
+
+    printOutput("The other player unpaused.")
+    syncStatus = "Play"
+    client.unpause()
   elseif (received_message_type == messenger.LOAD) then
     local slot = received_data[1]
-    --check if the state can be loaded
-    local status, err = savestate_sync.is_safe_to_loadslot(client_socket, slot)
-    if (not status) then
-      --if not, continue on normally
-      printOutput("Did not load slot " .. slot .. ": " .. err)
+
+    if (savestate_hashes[slot] == nil) then
+      local reason = "The other player attempted to load savestate slot " .. slot .. " does not exist for you."
+      printOutput(reason)
+      messenger.send(client_socket, messenger.LOAD_FAIL, reason)
     else
-      --if so, load the state, and reset necessary variables
+      load_queue[received_data[2]] = slot
+
+      printOutput("The other player unpaused.")
+      syncStatus = "Play"
+      client.unpause()
+    end
+  elseif (received_message_type == messenger.SAVE_HASH) then
+    local slot = received_data[1]
+    local their_save_hash = received_data[2]
+    --check that the save states match
+    if (savestate_hashes[slot] == their_save_hash) then
       savestate.loadslot(slot)
       printOutput("Savestate slot " .. slot .. " loaded.")
       sync.resetsync()
+
+      printOutput("The game is unpaused.")
+      syncStatus = "Play"
+      client.unpause()
+
+      --Skips the next advance frame
+      sync.syncallinput(client_socket)
+
       return
+    else
+      printOutput("Your saves at slot " .. slot .. " do not match!")
     end
+  elseif  (received_message_type == messenger.LOAD_FAIL) then
+    local their_reason = received_data[1]
+    printOutput("Other player would have an error loading:\n" .. their_reason)
   elseif (received_message_type == messenger.SAVE) then
-    savestate.saveslot(received_data[1])
-    printOutput("Saved state to slot " .. received_data[1] .. ".")
+    save_queue[received_data[2]] = received_data[1]
+
+    printOutput("The other player unpaused.")
+    syncStatus = "Play"
+    client.unpause()
   else
     error("Unexpected message type received.")
   end

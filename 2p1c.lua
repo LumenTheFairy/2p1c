@@ -1,11 +1,20 @@
-config = dofile("config.lua")
-local sync = require("sync")
-config.input_display_enabled = true
-config.modify_inputs_enabled = true
 
 local guiClick = {}
 
 event.onexit(function() forms.destroy(form1) end)
+
+local form1, text1, btnKeymap, btnPause, btnQuit, btnFrame0, btnHost, btnClient
+local txbIP, lblIP, txbPort, lblPort
+local txbModifyInputs, lblModifyInputs, chkModifyInputs
+local txbInputDisplay, lblInputDisplay, chkInputDisplay
+local chkPlayer2, chkPlayer1, lblPlayer
+local btnSaveSlot, btnLoadSlot, ddnSaveSlot, lblSaveSlot
+local btnSaveConfig, btnLoadConfig
+
+config = dofile("config.lua")
+local sync = require("sync")
+config.input_display_enabled = true
+config.modify_inputs_enabled = true
 
 function printOutput(str) 
 	local outputtext = forms.gettext(text1)
@@ -246,12 +255,12 @@ forms.setproperty(form1, "ControlBox", false)
 text1 = forms.textbox(form1, "", 260, 325, nil, 290, 10, true, false)
 forms.setproperty(text1, "ReadOnly", true)
 
-btnKeymap = forms.button(form1, "Set Controls", function() guiClick["setkeymap"] = keymapfunc end, 10, 10, 80, 30)
+btnKeymap = forms.button(form1, "Set Controls", function() guiClick["Set Keymap"] = keymapfunc end, 10, 10, 80, 30)
 btnPause = forms.button(form1, "Pause", togglePause, 100, 10, 80, 30)
 btnQuit = forms.button(form1, "Quit 2P1C", quit2P1C, 190, 10, 80, 30)
 forms.setproperty(btnPause, "Enabled", false)
 
-btnFrame0 = forms.button(form1, "Initialize", frame0, 10, 50, 80, 30)
+btnFrame0 = forms.button(form1, "Initialize", function() guiClick["Initialize"] = frame0 end, 10, 50, 80, 30)
 btnHost = forms.button(form1, "Host", function() prepareConnection(); guiClick["Host Server"] = hostfunc end, 100, 50, 80, 30)
 btnClient = forms.button(form1, "Join", function() prepareConnection(); guiClick["Join Server"] = clientfunc end, 190, 50, 80, 30)
 
