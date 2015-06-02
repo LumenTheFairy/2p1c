@@ -131,17 +131,14 @@ local current_input, received_input
 local received_message_type, received_data
 local received_frame
 local my_input, their_input, final_input
-local pause_type, unpause_type, unpause_data
 
 local controller = require("2p1c\\controller")
 local keymap = require(controller.keymapfilename)
 
-local offset_frame, current_frame, future_frame
-local should_break = false
+local current_frame, future_frame
 
 function sync.resetsync()
-    offset_frame = emu.framecount()
-    current_frame = emu.framecount() - offset_frame
+    current_frame = emu.framecount()
     future_frame = current_frame + config.latency
 
     --create input queues
@@ -163,7 +160,7 @@ end
 --shares the input between two players, making sure that the same input is
 --pressed for both players on every frame
 function sync.syncallinput(client_socket)
-  current_frame = emu.framecount() - offset_frame
+  current_frame = emu.framecount()
   future_frame = current_frame + config.latency
 
   --get the player input
@@ -228,6 +225,7 @@ function sync.syncallinput(client_socket)
   --receive this frame's input from the other player
   while (their_input_queue[current_frame] == nil) do
     received_message_type, received_data = messenger.receive(client_socket)
+
     if (received_message_type == messenger.INPUT) then
       --we received input
       received_input = received_data[1]

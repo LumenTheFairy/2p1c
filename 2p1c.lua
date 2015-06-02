@@ -20,10 +20,34 @@ local sync = require("2p1c\\sync")
 config.input_display_enabled = true
 config.modify_inputs_enabled = true
 
+local stringList = {last = 1, first = 24}
+for i = stringList.first, stringList.last, -1 do
+	stringList[i] = ""
+end
+
+function stringList.push(value)
+  stringList.first = stringList.first + 1
+  stringList[stringList.first] = value
+  stringList[stringList.last] = nil
+  stringList.last = stringList.last + 1
+end
+
+function stringList.tostring()
+	local outputstr = ""
+	for i = stringList.first, stringList.last, -1 do
+		outputstr = outputstr .. stringList[i] .. "\r\n"
+	end
+
+	return outputstr
+end
+
+
 function printOutput(str) 
-	local outputtext = forms.gettext(text1)
-	outputtext = "[" .. os.date("%H:%M:%S", os.time()) .. "] " .. str .. "\r\n" .. outputtext
-	forms.settext(text1, outputtext)
+	str = string.gsub (str, "\n", "\r\n")
+	str = "[" .. os.date("%H:%M:%S", os.time()) .. "] " .. str
+	stringList.push(str)
+
+	forms.settext(text1, stringList.tostring())
 end
 
 function updateGUI()
@@ -67,7 +91,6 @@ function updateGUI()
 		forms.setproperty(chkPlayer2, "Enabled", true)
 		forms.setproperty(btnHost, "Enabled", true)
 		forms.setproperty(btnClient, "Enabled", true)
-		--forms.setproperty(btnFrame0, "Enabled", true)
 		forms.setproperty(btnLoadConfig, "Enabled", true)
 		forms.setproperty(btnPause, "Enabled", false)
 		forms.settext(btnQuit, "Quit 2P1C")	
@@ -85,7 +108,6 @@ function updateGUI()
 		forms.setproperty(chkPlayer2, "Enabled", false)
 		forms.setproperty(btnHost, "Enabled", false)
 		forms.setproperty(btnClient, "Enabled", false)
-		forms.setproperty(btnFrame0, "Enabled", false)
 		forms.setproperty(btnLoadConfig, "Enabled", false)
 		forms.setproperty(btnPause, "Enabled", true)
 		forms.settext(btnQuit, "End Sync")	
@@ -143,7 +165,6 @@ function prepareConnection()
 	forms.setproperty(chkPlayer2, "Enabled", false)
 	forms.setproperty(btnHost, "Enabled", false)
 	forms.setproperty(btnClient, "Enabled", false)
-	forms.setproperty(btnFrame0, "Enabled", false)
 	forms.setproperty(btnPause, "Enabled", true)
 end
 
