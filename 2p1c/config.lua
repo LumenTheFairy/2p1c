@@ -34,9 +34,6 @@ config.input_modifier = "inputmodifier_leftandright"
 --contains the input display code wish to use. If you do not wish to display
 --input, set this to "inputdisplay_none".
 config.input_display = "inputdisplay_snes"
---This is the path from directory containing the sync scripts to BizHawk's root
---directory (the directory where the EmuHawk executable is found.) This is used
---when creating and loading savestates.
-config.path_to_root = "../../"
+
 
 return config

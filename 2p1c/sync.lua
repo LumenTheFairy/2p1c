@@ -8,29 +8,29 @@ function sync.initialize()
   --attempt to load the desired input modifier. If it does not exist, load the
   --default modifier
   require_status, modify_inputs = pcall(function()
-    return dofile(config.input_modifier)
+    return dofile("2p1c\\" .. config.input_modifier)
   end)
   if not require_status then
     printOutput("The input modifier specified in config.lua could not be found.")
     printOutput("Loading the default input modifier instead.")
     config.input_modifier = "inputmodifier_none.lua"
-    modify_inputs = dofile("inputmodifier_none.lua")
+    modify_inputs = dofile("2p1c\\inputmodifier_none.lua")
   end
   --attempt to load the desired input display. If it does not exist, load the
   --default display
   require_status, display_inputs = pcall(function()
-    return dofile(config.input_display)
+    return dofile("2p1c\\" .. config.input_display)
   end)
   if not require_status then
     printOutput("The input diplay specified in config.lua could not be found.")
     printOutput("Loading the default input diplay instead.")
     config.input_display = "inputdisplay_none.lua"
-    display_inputs = dofile("inputdisplay_none.lua")
+    display_inputs = dofile("2p1c\\inputdisplay_none.lua")
   end
 end
 
-local messenger = require("messenger")
-local savestate_sync = require("savestate_sync")
+local messenger = require("2p1c\\messenger")
+local savestate_sync = require("2p1c\\savestate_sync")
 
 --makes sure that configurations are consistent between the two players
 function sync.syncconfig(client_socket, default_player)
@@ -40,16 +40,16 @@ function sync.syncconfig(client_socket, default_player)
 
 
   --construct a value representing the input modifier that is in use
-  local sha1 = require("sha1")
+  local sha1 = require("2p1c\\sha1")
   local modifier_text = ""
-  for line in io.lines(config.input_modifier) do modifier_text = modifier_text .. line .. "\n" end
+  for line in io.lines("2p1c\\" .. config.input_modifier) do modifier_text = modifier_text .. line .. "\n" end
   local modifier_hash = sha1.sha1(modifier_text)
 
   --construct a value representing the sync code that is in use
   local sync_code = ""
-  for line in io.lines("sync.lua") do sync_code = sync_code .. line .. "\n" end
-  for line in io.lines("controller.lua") do sync_code = sync_code .. line .. "\n" end
-  for line in io.lines("messenger.lua") do sync_code = sync_code .. line .. "\n" end
+  for line in io.lines("2p1c\\sync.lua") do sync_code = sync_code .. line .. "\n" end
+  for line in io.lines("2p1c\\controller.lua") do sync_code = sync_code .. line .. "\n" end
+  for line in io.lines("2p1c\\messenger.lua") do sync_code = sync_code .. line .. "\n" end
   local sync_hash = sha1.sha1(sync_code)
 
   --send the configuration
@@ -133,7 +133,7 @@ local received_frame
 local my_input, their_input, final_input
 local pause_type, unpause_type, unpause_data
 
-local controller = require("controller")
+local controller = require("2p1c\\controller")
 local keymap = require(controller.keymapfilename)
 
 local offset_frame, current_frame, future_frame

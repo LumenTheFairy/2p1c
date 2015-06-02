@@ -20,7 +20,7 @@ for j, b in pairs(controller.buttons) do
   controller.unset[b] = false
 end
 --what the name of the keymap file should be based on the current system
-controller.keymapfilename = "keymap" .. emu.getsystemid()
+controller.keymapfilename = "2p1c\\keymap" .. emu.getsystemid()
 
 
 

@@ -1,7 +1,7 @@
 --author: TheOnlyOne
 
 local socket = require("socket")
-local sync = require("sync")
+local sync = require("2p1c\\sync")
 
 return function()
 	--create the server

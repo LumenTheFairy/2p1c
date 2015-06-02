@@ -1,6 +1,6 @@
 --author: TestRunner
 
-controller = require("controller")
+controller = require("2p1c\\controller")
 
 return function()
 	local keymap = {}

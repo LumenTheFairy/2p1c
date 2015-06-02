@@ -3,8 +3,8 @@
 --author: TheOnlyOne
 local savestate_sync = {}
 
-local messenger = require("messenger")
-local sha1 = require("sha1")
+local messenger = require("2p1c\\messenger")
+local sha1 = require("2p1c\\sha1")
 
 --checks if a file exists and can be read
 --credit: http://stackoverflow.com/questions/4990990/lua-check-if-a-file-exists
@@ -26,7 +26,7 @@ function savestate_sync.update_hash(slot)
   --construct the filename
   local romname = gameinfo.getromname()
   local systemname = emu.getsystemid()
-  local filename = config.path_to_root .. systemname .. "/State/" .. romname .. ".QuickSave" .. slot .. ".State"
+  local filename = "./" .. systemname .. "/State/" .. romname .. ".QuickSave" .. slot .. ".State"
 
   --check if it exists
   if (file_exists(filename)) then
@@ -42,6 +42,7 @@ function savestate_sync.update_hash(slot)
   else
     savestate_hashes[slot] = nil
   end
+  print(savestate_hashes[slot])
 end
 
 for i = 0,9 do
@@ -60,7 +61,7 @@ function savestate_sync.are_batteries_same(client_socket)
   --construct the filename
   local romname = gameinfo.getromname()
   local systemname = emu.getsystemid()
-  local filename = config.path_to_root .. systemname .. "/SaveRAM/" .. romname .. ".SaveRAM"
+  local filename = "./" .. systemname .. "/SaveRAM/" .. romname .. ".SaveRAM"
 
   --check if it exists
   if (file_exists(filename)) then
@@ -112,8 +113,6 @@ function savestate_sync.are_batteries_same(client_socket)
   end
 end
 
-return savestate_sync
-
 --Checks if it is safe to load a save state, making sure the state exists for
 --both players, and that both players' saves are the same.
 --returns true if the slot can be loaded
@@ -129,7 +128,7 @@ function savestate_sync.are_save0_same(client_socket)
     if (received_message_type == messenger.SAVE_HASH) then
       local their_save_hash = received_data[2]
       --check that the save states match
-      if (save_hash == their_save_hash) then
+      if (savestate_hashes[0] == their_save_hash) then
         return true
       else
         return false, "Your init states do not match! Try restarting BizHawk."
@@ -145,7 +144,7 @@ function savestate_sync.are_save0_same(client_socket)
     messenger.send(client_socket, messenger.LOAD_FAIL, reason)
     messenger.receive(client_socket)
 
-    return false, reason . . "\nTry restarting BizHawk."
+    return false, reason .. "\nTry restarting BizHawk."
   end
 end
 

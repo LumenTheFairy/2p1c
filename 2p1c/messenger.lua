@@ -2,7 +2,7 @@
 --author: TheOnlyOne
 local messenger = {}
 
-controller = require("controller")
+controller = require("2p1c\\controller")
 
 --list of message types
 messenger.INPUT = 0
