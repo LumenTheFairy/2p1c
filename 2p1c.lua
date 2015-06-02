@@ -4,21 +4,19 @@ if (emu.framecount() ~= 1) then
 	emu.frameadvance()
 end
 
-
-
 local guiClick = {}
 
 
 local form1, text1, btnKeymap, btnPause, btnQuit, btnFrame0, btnHost, btnClient
-local txbIP, lblIP, txbPort, lblPort
+local txbIP, lblIP, txbPort, lblPort, txbLatency, lblLatency
 local txbModifyInputs, lblModifyInputs, chkModifyInputs
 local txbInputDisplay, lblInputDisplay, chkInputDisplay
 local chkPlayer2, chkPlayer1, lblPlayer
 local btnSaveSlot, btnLoadSlot, ddnSaveSlot, lblSaveSlot
 local btnSaveConfig, btnLoadConfig
 
-config = dofile("config.lua")
-local sync = require("sync")
+config = dofile("2p1c\\config.lua")
+local sync = require("2p1c\\sync")
 config.input_display_enabled = true
 config.modify_inputs_enabled = true
 
@@ -31,6 +29,7 @@ end
 function updateGUI()
 	forms.settext(txbIP, config.hostname)
 	forms.settext(txbPort, config.port)
+	forms.settext(txbLatency, config.latency)
 	forms.settext(txbModifyInputs, config.input_modifier)
 	forms.settext(txbInputDisplay, config.input_display)
 
@@ -61,6 +60,7 @@ function updateGUI()
 	if syncStatus == "Idle" then
 		forms.setproperty(txbIP, "Enabled", true)
 		forms.setproperty(txbPort, "Enabled", true)
+		forms.setproperty(txbLatency, "Enabled", true)
 		forms.setproperty(txbModifyInputs, "Enabled", true)
 		forms.setproperty(txbInputDisplay, "Enabled", true)
 		forms.setproperty(chkPlayer1, "Enabled", true)
@@ -78,6 +78,7 @@ function updateGUI()
 	else
 		forms.setproperty(txbIP, "Enabled", false)
 		forms.setproperty(txbPort, "Enabled", false)
+		forms.setproperty(txbLatency, "Enabled", false)
 		forms.setproperty(txbModifyInputs, "Enabled", false)
 		forms.setproperty(txbInputDisplay, "Enabled", false)
 		forms.setproperty(chkPlayer1, "Enabled", false)
@@ -100,12 +101,6 @@ function cleanConnection()
 	client_socket = nil
 
 	updateGUI()
-end
-
-function frame0()
-	client.reboot_core()
-	savestate.saveslot(0)
-	forms.destroy(form1)
 end
 
 function changePlayer1()
@@ -135,12 +130,14 @@ end
 
 function prepareConnection()
 	config.hostname = forms.gettext(txbIP)
-	config.port = forms.gettext(txbPort)
+	config.port = tonumber(forms.gettext(txbPort))
+	config.latency = tonumber(forms.gettext(txbLatency))
 	config.input_modifier = forms.gettext(txbModifyInputs)
 	config.input_display = forms.gettext(txbInputDisplay)
 	
 	forms.setproperty(txbIP, "Enabled", false)
 	forms.setproperty(txbPort, "Enabled", false)
+	forms.setproperty(txbLatency, "Enabled", false)
 	forms.setproperty(txbModifyInputs, "Enabled", false)
 	forms.setproperty(chkPlayer1, "Enabled", false)
 	forms.setproperty(chkPlayer2, "Enabled", false)
@@ -173,7 +170,7 @@ function saveSlot()
 end
 
 function loadConfig()
-	config = dofile("config.lua")
+	config = dofile("2p1c\\config.lua")
 	config.input_display_enabled = true
 	config.modify_inputs_enabled = true
 
@@ -182,7 +179,8 @@ end
 
 function saveConfig()
 	config.hostname = forms.gettext(txbIP)
-	config.port = forms.gettext(txbPort)
+	config.port = tonumber(forms.gettext(txbPort))
+	config.latency = tonumber(forms.gettext(txbLatency))
 	config.input_modifier = forms.gettext(txbModifyInputs)
 	config.input_display = forms.gettext(txbInputDisplay)
 
@@ -236,23 +234,18 @@ config.input_modifier = "]] .. config.input_modifier .. [["
 --input, set this to "inputdisplay_none".
 config.input_display = "]] .. config.input_display .. [["
 
---This is the path from directory containing the sync scripts to BizHawk's root
---directory (the directory where the EmuHawk executable is found.) This is used
---when creating and loading savestates.
-config.path_to_root = "../../"
-
 
 return config
 ]]
 
-	f = assert(io.open("config.lua", "w"))
+	f = assert(io.open("2p1c\\config.lua", "w"))
 	f:write(output)
 	f:close()
 end
 
-local keymapfunc = require("setkeymap")
-local hostfunc = require("host")
-local clientfunc = require("client")
+local keymapfunc = require("2p1c\\setkeymap")
+local hostfunc = require("2p1c\\host")
+local clientfunc = require("2p1c\\client")
 
 
 form1 = forms.newform(580, 390, "2p1c")
@@ -261,21 +254,20 @@ forms.setproperty(form1, "ControlBox", false)
 text1 = forms.textbox(form1, "", 260, 325, nil, 290, 10, true, false)
 forms.setproperty(text1, "ReadOnly", true)
 
-btnKeymap = forms.button(form1, "Set Controls", function() guiClick["Set Keymap"] = keymapfunc end, 10, 10, 80, 30)
-btnPause = forms.button(form1, "Pause", togglePause, 100, 10, 80, 30)
-btnQuit = forms.button(form1, "Quit 2P1C", quit2P1C, 190, 10, 80, 30)
+btnPause = forms.button(form1, "Pause", togglePause, 10, 10, 125, 30)
+btnQuit = forms.button(form1, "Quit 2P1C", quit2P1C, 145, 10, 125, 30)
 forms.setproperty(btnPause, "Enabled", false)
 
-btnFrame0 = forms.button(form1, "Initialize", function() end, 10, 50, 80, 30)
-forms.setproperty(btnFrame0, "Enabled", false)
-
+btnKeymap = forms.button(form1, "Set Controls", function() guiClick["Set Keymap"] = keymapfunc end, 10, 50, 80, 30)
 btnHost = forms.button(form1, "Host", function() prepareConnection(); guiClick["Host Server"] = hostfunc end, 100, 50, 80, 30)
 btnClient = forms.button(form1, "Join", function() prepareConnection(); guiClick["Join Server"] = clientfunc end, 190, 50, 80, 30)
 
-txbIP = forms.textbox(form1, "", 170, 20, nil, 10, 110, false, false)
-lblIP = forms.label(form1, "Host IP (Client only):", 15, 95, 130, 20)
-txbPort = forms.textbox(form1, "", 80, 20, "UNSIGNED", 190, 110, false, false)
-lblPort = forms.label(form1, "Port:", 195, 95, 130, 20)
+txbIP = forms.textbox(form1, "", 140, 20, nil, 10, 110, false, false)
+lblIP = forms.label(form1, "Host IP (Client only):", 15, 95, 120, 20)
+txbPort = forms.textbox(form1, "", 60, 20, "UNSIGNED", 160, 110, false, false)
+lblPort = forms.label(form1, "Port:", 165, 95, 50, 20)
+txbLatency = forms.textbox(form1, "", 40, 20, "UNSIGNED", 230, 110, false, false)
+lblLatency = forms.label(form1, "Latency:", 227, 95, 50, 20)
 
 txbModifyInputs = forms.textbox(form1, "", 195, 20, nil, 10, 155, false, false)
 lblModifyInputs = forms.label(form1, "Input Modifier:", 15, 140, 130, 20)
