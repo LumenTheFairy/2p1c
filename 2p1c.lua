@@ -1,3 +1,10 @@
+if (emu.framecount() ~= 1) then
+	client.reboot_core()
+	savestate.saveslot(0)
+	emu.frameadvance()
+end
+
+
 
 local guiClick = {}
 

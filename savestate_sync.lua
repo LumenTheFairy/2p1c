@@ -51,6 +51,7 @@ event.onsavestate(savestate_sync.update_hash)
 
 --Checks if it is safe to load a save state, making sure the state exists for
 --both players, and that both players' saves are the same.
+--First checks if they have the same save battery for proper feedback
 --returns true if the slot can be loaded
 --returns false and a reason for failure if not
 function savestate_sync.are_batteries_same(client_socket)
@@ -80,9 +81,9 @@ function savestate_sync.are_batteries_same(client_socket)
       local their_save_hash = received_data[2]
       --check that the save states match
       if (save_hash == their_save_hash) then
-        return true
+        return savestate_sync.are_save0_same(client_socket)
       else
-        return false, "Your batteries do not match!"
+        return false, "Your save batteries do not match!"
       end
     elseif  (received_message_type == messenger.LOAD_FAIL) then
       local their_reason = received_data[1]
@@ -101,13 +102,50 @@ function savestate_sync.are_batteries_same(client_socket)
     elseif  (received_message_type == messenger.LOAD_FAIL) then
       local their_reason = received_data[1]
       if (their_reason == "Could not find save battery.") then
-        return true
+        return savestate_sync.are_save0_same(client_socket)
       else
         return false, "Other player would have an error loading:\n" .. their_reason
       end
     else
       error("Unexpected message type received.")  
     end
+  end
+end
+
+return savestate_sync
+
+--Checks if it is safe to load a save state, making sure the state exists for
+--both players, and that both players' saves are the same.
+--returns true if the slot can be loaded
+--returns false and a reason for failure if not
+function savestate_sync.are_save0_same(client_socket)
+  --check if it exists
+  if (savestate_hashes[0] ~= nil) then
+ 
+    messenger.send(client_socket, messenger.SAVE_HASH, 0, savestate_hashes[0])
+
+    --If we can load, see what the deal is with the other player
+    local received_message_type, received_data = messenger.receive(client_socket)
+    if (received_message_type == messenger.SAVE_HASH) then
+      local their_save_hash = received_data[2]
+      --check that the save states match
+      if (save_hash == their_save_hash) then
+        return true
+      else
+        return false, "Your init states do not match! Try restarting BizHawk."
+      end
+    elseif  (received_message_type == messenger.LOAD_FAIL) then
+      local their_reason = received_data[1]
+      return false, "Other player would have an error loading:\n" .. their_reason
+    else
+      error("Unexpected message type received.")
+    end
+  else
+    local reason = "Could not find init state."
+    messenger.send(client_socket, messenger.LOAD_FAIL, reason)
+    messenger.receive(client_socket)
+
+    return false, reason . . "\nTry restarting BizHawk."
   end
 end
 

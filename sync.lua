@@ -115,7 +115,7 @@ function sync.synctoframe1(client_socket)
     error("Failed to sync.\n" .. err)
   end
 
-  joypad.set({Power=true})
+  savestate.loadslot(0)
 
   printOutput("Synced! Let the games begin!")
   coroutine.yield()
