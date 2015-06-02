@@ -42,13 +42,19 @@ function savestate_sync.update_hash(slot)
   else
     savestate_hashes[slot] = nil
   end
-  print(savestate_hashes[slot])
 end
 
 for i = 0,9 do
-   savestate_sync.update_hash(i)
+  savestate_sync.update_hash(i)
 end
-event.onsavestate(savestate_sync.update_hash)
+
+event.onsavestate(function (savefile)
+  local savematch = string.match(savefile, "QuickSave(%d)")
+
+  if (savematch ~= nil) then
+    savestate_sync.update_hash(tonumber(savematch))
+  end
+end)
 
 --Checks if it is safe to load a save state, making sure the state exists for
 --both players, and that both players' saves are the same.
