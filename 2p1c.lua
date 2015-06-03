@@ -19,6 +19,8 @@ config = dofile("2p1c\\config.lua")
 local sync = require("2p1c\\sync")
 config.input_display_enabled = true
 config.modify_inputs_enabled = true
+config.accept_timeout = 10
+config.input_timeout = 10
 
 local stringList = {last = 1, first = 24}
 for i = stringList.first, stringList.last, -1 do
@@ -93,7 +95,7 @@ function updateGUI()
 		forms.setproperty(btnClient, "Enabled", true)
 		forms.setproperty(btnLoadConfig, "Enabled", true)
 		forms.setproperty(btnPause, "Enabled", false)
-		forms.settext(btnQuit, "Quit 2P1C")	
+		forms.settext(btnQuit, "Quit")	
 
 		forms.setproperty(ddnSaveSlot, "Enabled", false)
 		forms.setproperty(btnSaveSlot, "Enabled", false)
@@ -110,7 +112,7 @@ function updateGUI()
 		forms.setproperty(btnClient, "Enabled", false)
 		forms.setproperty(btnLoadConfig, "Enabled", false)
 		forms.setproperty(btnPause, "Enabled", true)
-		forms.settext(btnQuit, "End Sync")	
+		forms.settext(btnQuit, "Close Connection")	
 
 		forms.setproperty(ddnSaveSlot, "Enabled", true)
 		forms.setproperty(btnSaveSlot, "Enabled", true)
@@ -212,19 +214,6 @@ local config = {}
 --and input displays. Valid player numbers are 1 and 2. Make sure this is the
 --other number from the person you are playing with.
 config.player = ]] .. config.player .. [[
-
-
---This is the amount of time, in seconds, that the host will wait for the
---client to connect. If this timeout is reached, the host script will end.
---This value is only inportant for the host.
-config.accept_timeout = ]] .. config.accept_timeout .. [[
-
-
---This is the amount of time, in seconds, that the input syncer will wait
---for the other player's input. If this timeout is reached, the connection
---will end, so a low timeout may ruin syncing if one player pauses emulation,
---has a slowdown in emulation, or has a slowdown in connection speed.
-config.input_timeout = ]] .. config.input_timeout .. [[
 
 
 --This is the port the connection will happen over. Make sure this is the same
@@ -371,7 +360,7 @@ while 1 do
 		local status, err = coroutine.resume(thread, client_socket)
 
 		if (status == false and err ~= nil) then
-			printOutput("Error during sync inputs: " .. err)
+			printOutput("Error during sync inputs: " .. tostring(err))
 		end
 	end
 

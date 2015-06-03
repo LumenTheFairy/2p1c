@@ -4,15 +4,6 @@ local config = {}
 --and input displays. Valid player numbers are 1 and 2. Make sure this is the
 --other number from the person you are playing with.
 config.player = 1
---This is the amount of time, in seconds, that the host will wait for the
---client to connect. If this timeout is reached, the host script will end.
---This value is only inportant for the host.
-config.accept_timeout = 10
---This is the amount of time, in seconds, that the input syncer will wait
---for the other player's input. If this timeout is reached, the connection
---will end, so a low timeout may ruin syncing if one player pauses emulation,
---has a slowdown in emulation, or has a slowdown in connection speed.
-config.input_timeout = 120
 --This is the port the connection will happen over. Make sure this is the same
 --for both players before trying to sync.
 config.port = 54321

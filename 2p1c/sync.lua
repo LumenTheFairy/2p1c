@@ -135,7 +135,7 @@ local my_input, their_input, final_input
 local controller = require("2p1c\\controller")
 local keymap = require(controller.keymapfilename)
 
-local current_frame, future_frame
+local current_frame, future_frame, timeout_frames
 
 function sync.resetsync()
     current_frame = emu.framecount()
@@ -202,7 +202,7 @@ function sync.syncallinput(client_socket)
     messenger.send(client_socket, messenger.QUIT)
 
     syncStatus = "Idle"
-    client.unpause("You")
+    client.unpause()
     error("You closed the connection.")
     return
   end
@@ -262,6 +262,7 @@ function sync.syncallinput(client_socket)
   end
 
   --receive this frame's input from the other player
+  timeout_frames = 0
   repeat
     received_message_type, received_data = messenger.receive(client_socket, true)
 
@@ -334,6 +335,12 @@ function sync.syncallinput(client_socket)
       sync.unpause("The other player")
       return
     elseif (received_message_type == nil) then
+      timeout_frames = timeout_frames + 1
+
+      if (timeout_frames > 600) then
+        error("Connection Timeout")
+      end
+
       if (syncStatus == "Play") then
         client.pause()
         coroutine.yield()
