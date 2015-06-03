@@ -262,15 +262,8 @@ function sync.syncallinput(client_socket)
   end
 
   --receive this frame's input from the other player
-  while (their_input_queue[current_frame] == nil) do
-    if (syncStatus == "Play") then
-      received_message_type, received_data = messenger.receive(client_socket)
-    else
-      received_message_type, received_data = messenger.receive(client_socket, true)
-      if received_message_type == nil then
-        return
-      end
-    end
+  repeat
+    received_message_type, received_data = messenger.receive(client_socket, true)
 
     if (received_message_type == messenger.INPUT) then
       --we received input
@@ -340,10 +333,18 @@ function sync.syncallinput(client_socket)
 
       sync.unpause("The other player")
       return
+    elseif (received_message_type == nil) then
+      if (syncStatus == "Play") then
+        client.pause()
+        coroutine.yield()
+        client.unpause()
+      else
+        return
+      end
     else
       error("Unexpected message type received.")
     end
-  end
+  until (their_input_queue[current_frame] ~= nil)
 
   if (syncStatus == "Pause") then
     return

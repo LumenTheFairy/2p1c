@@ -326,7 +326,8 @@ sendMessage = {}
 syncStatus = "Idle"
 local prev_syncStatus = "Idle"
 local prev_modify_inputs_enabled = true
-wclient_socket = nil
+client_socket = nil
+local thread
 
 updateGUI()
 
@@ -364,7 +365,9 @@ while 1 do
 	end
 
 	if syncStatus ~= "Idle" then
-		local thread = coroutine.create(sync.syncallinput)
+		if thread == nil or coroutine.status(thread) == "dead" then
+			thread = coroutine.create(sync.syncallinput)
+		end
 		local status, err = coroutine.resume(thread, client_socket)
 
 		if (status == false and err ~= nil) then
