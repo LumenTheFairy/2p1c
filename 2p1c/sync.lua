@@ -139,6 +139,7 @@ local current_frame, future_frame
 
 function sync.resetsync()
     current_frame = emu.framecount()
+    printOutput(current_frame)
     future_frame = current_frame + config.latency
 
     --create input queues
@@ -156,6 +157,21 @@ function sync.resetsync()
     end
 end
 
+function sync.unpause(whoUnpaused)
+  if (syncStatus == "Pause") then
+    if (whoPaused ~= nil) then
+      printOutput(whoUnpaused .. " unpaused the game.")
+    else
+      printOutput("The game is unpaused.")
+    end      
+
+    syncStatus = "Play"
+    client.unpause()   
+    return true
+  end
+
+  return false
+end
 
 --shares the input between two players, making sure that the same input is
 --pressed for both players on every frame
@@ -172,12 +188,21 @@ function sync.syncallinput(client_socket)
     pause_queue[future_frame] = "request"
   end
 
+  if sendMessage["Unpause"] == true then
+    sendMessage["Unpause"] = nil
+    messenger.send(client_socket, messenger.UNPAUSE)
+
+    if sync.unpause("You") then
+      return
+    end
+  end
+
   if sendMessage["Quit"] == true then 
     sendMessage["Quit"] = nil
     messenger.send(client_socket, messenger.QUIT)
 
     syncStatus = "Idle"
-    client.unpause()
+    client.unpause("You")
     error("You closed the connection.")
     return
   end
@@ -190,10 +215,14 @@ function sync.syncallinput(client_socket)
     messenger.send(client_socket, messenger.MODIFIER, i, future_frame)
     
     if (i) then
-        printOutput("You turned input modifier ON.")
-      else
-        printOutput("You turned input modifier OFF.")
-      end
+      printOutput("You turned input modifier ON.")
+    else
+      printOutput("You turned input modifier OFF.")
+    end
+
+    if sync.unpause("You") then
+      return
+    end
   end
 
   if sendMessage["Save"] ~= nil then 
@@ -202,6 +231,10 @@ function sync.syncallinput(client_socket)
 
     messenger.send(client_socket, messenger.SAVE, i, future_frame)
     save_queue[future_frame] = i
+
+    if sync.unpause("You") then
+      return
+    end
   end
 
   if sendMessage["Load"] ~= nil then 
@@ -213,18 +246,31 @@ function sync.syncallinput(client_socket)
     else
       load_queue[future_frame] = i
       messenger.send(client_socket, messenger.LOAD, i, future_frame)
+
+      if sync.unpause("You") then
+        return
+      end
     end
   end
 
-  --add input to the queue
-  my_input_queue[future_frame] = current_input
+  if (syncStatus == "Play") then
+    --add input to the queue
+    my_input_queue[future_frame] = current_input
 
-  --send the input to the other player
-  messenger.send(client_socket, messenger.INPUT, current_input, future_frame)
+    --send the input to the other player
+    messenger.send(client_socket, messenger.INPUT, current_input, future_frame)
+  end
 
   --receive this frame's input from the other player
   while (their_input_queue[current_frame] == nil) do
-    received_message_type, received_data = messenger.receive(client_socket)
+    if (syncStatus == "Play") then
+      received_message_type, received_data = messenger.receive(client_socket)
+    else
+      received_message_type, received_data = messenger.receive(client_socket, true)
+      if received_message_type == nil then
+        return
+      end
+    end
 
     if (received_message_type == messenger.INPUT) then
       --we received input
@@ -235,6 +281,10 @@ function sync.syncallinput(client_socket)
       their_input_queue[received_frame] = received_input
     elseif (received_message_type == messenger.PAUSE) then
       pause_queue[received_data[1]] = "accept"
+    elseif (received_message_type == messenger.UNPAUSE) then
+      if sync.unpause() then
+        return
+      end
     elseif (received_message_type == messenger.QUIT) then
       syncStatus = "Idle"
       client.unpause()
@@ -247,15 +297,23 @@ function sync.syncallinput(client_socket)
       else
         printOutput("The other player turned input modifier OFF.")
       end
+
+      if sync.unpause("The other player") then
+        return
+      end
     elseif (received_message_type == messenger.LOAD) then
       local slot = received_data[1]
 
       if (savestate_hashes[slot] == nil) then
-        local reason = "The other player attempted to load savestate slot " .. i .. ", but it does not exist for you."
+        local reason = "The other player attempted to load savestate slot " .. slot .. ", but it does not exist for you."
         printOutput(reason)
         messenger.send(client_socket, messenger.LOAD_FAIL, reason)
       else
         load_queue[received_data[2]] = slot
+
+        if sync.unpause("The other player") then
+          return
+        end
       end
     elseif (received_message_type == messenger.SAVE_HASH) then
       local slot = received_data[1]
@@ -265,6 +323,8 @@ function sync.syncallinput(client_socket)
         savestate.loadslot(slot)
         printOutput("Savestate slot " .. slot .. " loaded.")
         sync.resetsync()
+
+        sync.unpause()
 
         --Skips the next advance frame
         sync.syncallinput(client_socket)
@@ -277,9 +337,16 @@ function sync.syncallinput(client_socket)
       printOutput("Other player would have an error loading:\n" .. their_reason)
     elseif (received_message_type == messenger.SAVE) then
       save_queue[received_data[2]] = received_data[1]
+
+      sync.unpause("The other player")
+      return
     else
       error("Unexpected message type received.")
     end
+  end
+
+  if (syncStatus == "Pause") then
+    return
   end
 
   --construct the input for the next frame
@@ -346,144 +413,6 @@ function sync.syncallinput(client_socket)
       messenger.send(client_socket, messenger.SAVE_HASH, slot, savestate_hashes[slot])
     end
     load_queue[current_frame] = nil
-  end
-end
-
-
-function sync.syncpause(client_socket)
-  if sendMessage["Unpause"] == true then
-    sendMessage["Unpause"] = nil
-    messenger.send(client_socket, messenger.UNPAUSE)
-
-    printOutput("You unpaused.") 
-    client.unpause()
-    syncStatus = "Play"
-  end
-
-  if sendMessage["ModifyInputs"] ~= nil then 
-    local i = sendMessage["ModifyInputs"]
-    sendMessage["ModifyInputs"] = nil
-
-    modifier_state_queue[future_frame] = i
-    messenger.send(client_socket, messenger.MODIFIER, i, future_frame)
-    
-    if (i) then
-      printOutput("You turned input modifier ON.")
-   else
-      printOutput("You turned input modifier OFF.")
-    end
-
-    printOutput("You unpaused.") 
-    client.unpause()
-    syncStatus = "Play"
-  end
-
-  if sendMessage["Save"] ~= nil then 
-    local i = sendMessage["Save"]
-    sendMessage["Save"] = nil
-
-    messenger.send(client_socket, messenger.SAVE, i, future_frame)
-    save_queue[future_frame] = i
-
-    printOutput("You unpaused.") 
-    client.unpause()
-    syncStatus = "Play"
-  end
-
-  if sendMessage["Load"] ~= nil then 
-    local i = sendMessage["Load"]
-    sendMessage["Load"] = nil
-
-    if (savestate_hashes[i] == nil) then
-      printOutput("Savestate slot " .. i .. " does not exist.")
-    else
-      messenger.send(client_socket, messenger.LOAD, i, future_frame) 
-      load_queue[future_frame] = i 
-
-      printOutput("You unpaused.") 
-      client.unpause()
-      syncStatus = "Play"
-    end
-  end
-
-  received_message_type, received_data = messenger.receive(client_socket, true)
-  if received_message_type == nil then
-    return
-  end
-
-  if (received_message_type == messenger.INPUT) then
-    --we received input
-    received_input = received_data[1]
-    received_frame = received_data[2]
-
-    --add the input to the queue
-    their_input_queue[received_frame] = received_input
-  elseif (received_message_type == messenger.UNPAUSE) then
-    printOutput("The other player unpaused.")
-    syncStatus = "Play"
-    client.unpause()
-  elseif (received_message_type == messenger.QUIT) then
-    syncStatus = "Idle"
-    client.unpause()
-    error("The other player quit.")    
-    return
-  elseif (received_message_type == messenger.MODIFIER) then
-    modifier_state_queue[received_data[2]] = received_data[1]
-
-    if (received_data[1]) then
-      printOutput("The other player turned input modifier ON.")
-    else
-      printOutput("The other player turned input modifier OFF.")
-    end
-
-    printOutput("The other player unpaused.")
-    syncStatus = "Play"
-    client.unpause()
-  elseif (received_message_type == messenger.LOAD) then
-    local slot = received_data[1]
-
-    if (savestate_hashes[slot] == nil) then
-      local reason = "The other player attempted to load savestate slot " .. slot .. " does not exist for you."
-      printOutput(reason)
-      messenger.send(client_socket, messenger.LOAD_FAIL, reason)
-    else
-      load_queue[received_data[2]] = slot
-
-      printOutput("The other player unpaused.")
-      syncStatus = "Play"
-      client.unpause()
-    end
-  elseif (received_message_type == messenger.SAVE_HASH) then
-    local slot = received_data[1]
-    local their_save_hash = received_data[2]
-    --check that the save states match
-    if (savestate_hashes[slot] == their_save_hash) then
-      savestate.loadslot(slot)
-      printOutput("Savestate slot " .. slot .. " loaded.")
-      sync.resetsync()
-
-      printOutput("The game is unpaused.")
-      syncStatus = "Play"
-      client.unpause()
-
-      --Skips the next advance frame
-      sync.syncallinput(client_socket)
-
-      return
-    else
-      printOutput("Your saves at slot " .. slot .. " do not match!")
-    end
-  elseif  (received_message_type == messenger.LOAD_FAIL) then
-    local their_reason = received_data[1]
-    printOutput("Other player would have an error loading:\n" .. their_reason)
-  elseif (received_message_type == messenger.SAVE) then
-    save_queue[received_data[2]] = received_data[1]
-
-    printOutput("The other player unpaused.")
-    syncStatus = "Play"
-    client.unpause()
-  else
-    error("Unexpected message type received.")
   end
 end
 

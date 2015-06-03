@@ -6,8 +6,8 @@ end
 
 local guiClick = {}
 
-
-local form1, text1, btnKeymap, btnPause, btnQuit, btnFrame0, btnHost, btnClient
+form1 = nil
+local text1, btnKeymap, btnPause, btnQuit, btnFrame0, btnHost, btnClient
 local txbIP, lblIP, txbPort, lblPort, txbLatency, lblLatency
 local txbModifyInputs, lblModifyInputs, chkModifyInputs
 local txbInputDisplay, lblInputDisplay, chkInputDisplay
@@ -363,28 +363,19 @@ while 1 do
 		end
 	end
 
-	if syncStatus == "Play" then
+	if syncStatus ~= "Idle" then
 		local thread = coroutine.create(sync.syncallinput)
 		local status, err = coroutine.resume(thread, client_socket)
 
 		if (status == false and err ~= nil) then
-			printOutput("Error during sync inputs (Play): " .. err)
+			printOutput("Error during sync inputs: " .. err)
 		end
 	end
 
-	if syncStatus == "Pause" then
-		local thread = coroutine.create(sync.syncpause)
-		local status, err = coroutine.resume(thread, client_socket)
-
-		if (status == false and err ~= nil) then
-			printOutput("Error during sync inputs (Pause): " .. err)
-		end
-
-		emu.yield()
-	else
-		emu.frameadvance()		
-	end
+	-- 2 Emu Yields = 1 Frame Advance
+	emu.yield()
+	emu.yield()
 
 	--clear all input so that actual inputs do not interfere
-  	joypad.set(controller.unset)
+	joypad.set(controller.unset)
 end
