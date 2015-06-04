@@ -123,8 +123,32 @@ end
 function cleanConnection()
 	syncStatus = "Idle"
 	client_socket = nil
-
+	server = nil
+	
 	updateGUI()
+end
+
+--when the script finishes, make sure to close the connection
+function close_connection()
+  if (client_socket ~= nil) then
+    client_socket:close()
+  end
+  if (server ~= nil) then
+    server:close()
+  end
+  printOutput("Connection closed.")
+  cleanConnection()
+end
+
+event.onexit(function () close_connection(); forms.destroy(form1) end)
+
+--furthermore, override error with a function that closes the connection
+--before the error is actually thrown
+local old_error = error
+
+error = function(str, level)
+  close_connection()
+  old_error(str, 0)
 end
 
 function changePlayer1()
@@ -316,6 +340,7 @@ syncStatus = "Idle"
 local prev_syncStatus = "Idle"
 local prev_modify_inputs_enabled = true
 client_socket = nil
+server = nil
 local thread
 
 updateGUI()
