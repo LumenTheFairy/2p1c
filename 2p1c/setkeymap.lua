@@ -67,7 +67,7 @@ return function()
 
 	output = output .. "}\n\nreturn keymap"
 
-	f = assert(io.open(controller.keymapfilename .. ".lua", "w"))
+	f = assert(io.open(controller.keymapfilename, "w"))
 	f:write(output)
 	f:close()
 

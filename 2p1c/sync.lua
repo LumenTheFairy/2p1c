@@ -133,7 +133,25 @@ local received_frame
 local my_input, their_input, final_input
 
 local controller = require("2p1c\\controller")
-local keymap = require(controller.keymapfilename)
+
+require_status, keymap = pcall(function()
+  return dofile(controller.keymapfilename)
+end)
+if not require_status then
+  keymap = {}
+
+  local output = ""
+  output = output
+  .. "--This file contains the controller key mappings.\n"
+  .. "--This file can be set appropriately by running setkeymap.lua,\n"
+  .. "--or it can be manually edited - the names of keys can be found at\n"
+  .. "-- http://www.codeproject.com/Tips/73227/Keys-Enumeration-Win\n"
+  .. "local keymap = {}\n\nreturn keymap"
+
+  f = assert(io.open(controller.keymapfilename, "w"))
+  f:write(output)
+  f:close()
+end
 
 local current_frame, future_frame, timeout_frames
 
