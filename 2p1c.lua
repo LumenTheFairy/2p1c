@@ -1,3 +1,8 @@
+if (gameinfo.getromname() == "Null") then
+	print("Load a rom first.")
+	return
+end
+
 if (emu.framecount() ~= 1) then
 	client.reboot_core()
 	savestate.saveslot(0)
