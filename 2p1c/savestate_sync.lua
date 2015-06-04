@@ -32,10 +32,7 @@ function savestate_sync.update_hash(slot)
   if (file_exists(filename)) then
     --construct a value that represents the save state
     local save_text = ""
-
-    local f = assert(io.open(filename, "r"))
-    save_text = f:read("*all")
-    f:close()
+    for line in io.lines(filename) do save_text = save_text .. line .. "\n" end
 
     local save_hash = sha1.sha1(save_text)
     savestate_hashes[slot] = save_hash

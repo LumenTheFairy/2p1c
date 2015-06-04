@@ -139,7 +139,6 @@ local current_frame, future_frame, timeout_frames
 
 function sync.resetsync()
     current_frame = emu.framecount()
-    printOutput(current_frame)
     future_frame = current_frame + config.latency
 
     --create input queues
