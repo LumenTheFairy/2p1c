@@ -14,8 +14,86 @@ local txbInputDisplay, lblInputDisplay, chkInputDisplay
 local chkPlayer2, chkPlayer1, lblPlayer
 local btnSaveSlot, btnLoadSlot, ddnSaveSlot, lblSaveSlot
 local btnSaveConfig, btnLoadConfig
+config = {}
 
-config = dofile("2p1c\\config.lua")
+function loadConfig()
+	config = dofile("2p1c\\config.lua")
+	config.input_display_enabled = true
+	config.modify_inputs_enabled = true
+
+	updateGUI()
+end
+
+function saveConfig(dontRead)
+	if (dontRead == nil) then
+		config.hostname = forms.gettext(txbIP)
+		config.port = tonumber(forms.gettext(txbPort))
+		config.latency = tonumber(forms.gettext(txbLatency))
+		config.input_modifier = forms.gettext(txbModifyInputs)
+		config.input_display = forms.gettext(txbInputDisplay)
+	end
+
+	local output = [[
+local config = {}
+
+--This determines which player you are. This is mainly used in input modifiers
+--and input displays. Valid player numbers are 1 and 2. Make sure this is the
+--other number from the person you are playing with.
+config.player = ]] .. config.player .. [[
+
+
+--This is the port the connection will happen over. Make sure this is the same
+--for both players before trying to sync.
+config.port = ]] .. config.port .. [[
+
+
+--This is the ip address or hostname of the player running host.lua (ip
+--addresses should should still be in quotes.) This value is only inportant
+--for the client.
+config.hostname = "]] .. config.hostname .. [["
+
+--This is the number of frames the network has to send the inputs back and
+--forth. It is also the number of frames that all input will be delayed. If
+--this is too low, the gameplay will be very slow and choppy due to the fact
+--that the players must wait to recieve the other's input. If this is too high,
+--there will be noticable input delay.
+config.latency = ]] .. config.latency .. [[
+
+
+--This is the file name (without the .lua extension) of the lua script that
+--contains the input modifier you wish to use. If you do not wish to run any
+--input modification, set this to "inputmodifier_none".
+config.input_modifier = "]] .. config.input_modifier .. [["
+
+--This is the file name (without the .lua extension) of the lua script that
+--contains the input display code wish to use. If you do not wish to display
+--input, set this to "inputdisplay_none".
+config.input_display = "]] .. config.input_display .. [["
+
+
+return config
+]]
+
+	f = assert(io.open("2p1c\\config.lua", "w"))
+	f:write(output)
+	f:close()
+end
+
+require_status, config = pcall(function()
+	return dofile("2p1c\\config.lua")
+end)
+if not require_status then
+	config = {}
+	config.player = 1
+	config.port = 54321
+	config.hostname = "localhost"
+	config.latency = 4
+	config.input_modifier = "inputmodifier_leftandright.lua"
+	config.input_display = "inputdisplay_snes.lua"
+
+	saveConfig(true)
+end
+
 local sync = require("2p1c\\sync")
 config.input_display_enabled = true
 config.modify_inputs_enabled = true
@@ -124,7 +202,7 @@ function cleanConnection()
 	syncStatus = "Idle"
 	client_socket = nil
 	server = nil
-	
+
 	updateGUI()
 end
 
@@ -216,66 +294,6 @@ function saveSlot()
 	sendMessage["Save"] = tonumber(forms.gettext(ddnSaveSlot))
 end
 
-function loadConfig()
-	config = dofile("2p1c\\config.lua")
-	config.input_display_enabled = true
-	config.modify_inputs_enabled = true
-
-	updateGUI()
-end
-
-function saveConfig()
-	config.hostname = forms.gettext(txbIP)
-	config.port = tonumber(forms.gettext(txbPort))
-	config.latency = tonumber(forms.gettext(txbLatency))
-	config.input_modifier = forms.gettext(txbModifyInputs)
-	config.input_display = forms.gettext(txbInputDisplay)
-
-	local output = [[
-local config = {}
-
---This determines which player you are. This is mainly used in input modifiers
---and input displays. Valid player numbers are 1 and 2. Make sure this is the
---other number from the person you are playing with.
-config.player = ]] .. config.player .. [[
-
-
---This is the port the connection will happen over. Make sure this is the same
---for both players before trying to sync.
-config.port = ]] .. config.port .. [[
-
-
---This is the ip address or hostname of the player running host.lua (ip
---addresses should should still be in quotes.) This value is only inportant
---for the client.
-config.hostname = "]] .. config.hostname .. [["
-
---This is the number of frames the network has to send the inputs back and
---forth. It is also the number of frames that all input will be delayed. If
---this is too low, the gameplay will be very slow and choppy due to the fact
---that the players must wait to recieve the other's input. If this is too high,
---there will be noticable input delay.
-config.latency = ]] .. config.latency .. [[
-
-
---This is the file name (without the .lua extension) of the lua script that
---contains the input modifier you wish to use. If you do not wish to run any
---input modification, set this to "inputmodifier_none".
-config.input_modifier = "]] .. config.input_modifier .. [["
-
---This is the file name (without the .lua extension) of the lua script that
---contains the input display code wish to use. If you do not wish to display
---input, set this to "inputdisplay_none".
-config.input_display = "]] .. config.input_display .. [["
-
-
-return config
-]]
-
-	f = assert(io.open("2p1c\\config.lua", "w"))
-	f:write(output)
-	f:close()
-end
 
 local keymapfunc = require("2p1c\\setkeymap")
 local hostfunc = require("2p1c\\host")
