@@ -258,18 +258,25 @@ function messenger.receive(client_socket, nonblocking)
   end
 
   --get the next message
-  local message = client_socket:receive()
+  local message, err = client_socket:receive()
 
   if nonblocking then
     client_socket:settimeout(config.input_timeout)
   end
 
   if(message == nil) then
-    if not nonblocking then 
-      error("Timed out waiting for a message from the other player (the other player may have disconnected.)")
+    if err == "timeout" then
+      if not nonblocking then 
+        error("Timed out waiting for a message from the other player (the other player may have disconnected.)")
+      else
+        return nil
+      end
+    elseif err == "closed" then
+      error("Other player closed the connection.")
     else
-      return nil
+      error("Unexpected error.")
     end
+
   end
   --determine message type
   local message_type = char_to_message_type[message:sub(1,1)]

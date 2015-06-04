@@ -198,7 +198,6 @@ function sync.syncallinput(client_socket)
 
   if sendMessage["Quit"] == true then 
     sendMessage["Quit"] = nil
-    messenger.send(client_socket, messenger.QUIT)
 
     syncStatus = "Idle"
     client.unpause()
@@ -278,11 +277,6 @@ function sync.syncallinput(client_socket)
       if sync.unpause() then
         return
       end
-    elseif (received_message_type == messenger.QUIT) then
-      syncStatus = "Idle"
-      client.unpause()
-      error("The other player quit.")    
-      return
     elseif (received_message_type == messenger.MODIFIER) then
       modifier_state_queue[received_data[2]] = received_data[1]
       if (received_data[1]) then
@@ -336,7 +330,7 @@ function sync.syncallinput(client_socket)
     elseif (received_message_type == nil) then
       timeout_frames = timeout_frames + 1
 
-      if (timeout_frames > 600) then
+      if (timeout_frames > 300) then
         error("Connection Timeout")
       end
 
