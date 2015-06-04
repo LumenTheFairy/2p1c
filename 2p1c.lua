@@ -22,7 +22,7 @@ local btnSaveConfig, btnLoadConfig
 config = {}
 
 function loadConfig()
-	config = dofile("2p1c\\config.lua")
+	config = dofile("2p1c\\config")
 	config.input_display_enabled = true
 	config.modify_inputs_enabled = true
 
@@ -79,13 +79,13 @@ config.input_display = "]] .. config.input_display .. [["
 return config
 ]]
 
-	f = assert(io.open("2p1c\\config.lua", "w"))
+	f = assert(io.open("2p1c\\config", "w"))
 	f:write(output)
 	f:close()
 end
 
 require_status, config = pcall(function()
-	return dofile("2p1c\\config.lua")
+	return dofile("2p1c\\config")
 end)
 if not require_status then
 	config = {}
@@ -93,8 +93,8 @@ if not require_status then
 	config.port = 54321
 	config.hostname = "localhost"
 	config.latency = 4
-	config.input_modifier = "inputmodifier_leftandright.lua"
-	config.input_display = "inputdisplay_snes.lua"
+	config.input_modifier = "leftandright"
+	config.input_display = "snes"
 
 	saveConfig(true)
 end
@@ -148,13 +148,13 @@ function updateGUI()
 	forms.setproperty(chkInputDisplay, "Checked", config.input_display_enabled)
 	forms.setproperty(chkModifyInputs, "Checked", config.modify_inputs_enabled)
 
-	if config.input_display == "inputdisplay_none.lua" then
+	if config.input_display == "none" then
 		forms.setproperty(chkInputDisplay, "Enabled", false)
 	else
 		forms.setproperty(chkInputDisplay, "Enabled", true)
 	end	
 
-	if (config.input_modifier == "inputmodifier_none.lua" or syncStatus == "Idle") then
+	if (config.input_modifier == "none" or syncStatus == "Idle") then
 		forms.setproperty(chkModifyInputs, "Enabled", false)
 	else
 		forms.setproperty(chkModifyInputs, "Enabled", true)
@@ -270,6 +270,7 @@ function prepareConnection()
 	forms.setproperty(txbPort, "Enabled", false)
 	forms.setproperty(txbLatency, "Enabled", false)
 	forms.setproperty(txbModifyInputs, "Enabled", false)
+	forms.setproperty(txbInputDisplay, "Enabled", false)
 	forms.setproperty(chkPlayer1, "Enabled", false)
 	forms.setproperty(chkPlayer2, "Enabled", false)
 	forms.setproperty(btnHost, "Enabled", false)

@@ -4,6 +4,7 @@
 
 *
 !2p1c/
+!2p1c/**
 !2p1c.lua
 !README.md
 !.gitignore
