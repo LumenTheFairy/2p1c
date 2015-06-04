@@ -300,6 +300,17 @@ function saveSlot()
 	sendMessage["Save"] = tonumber(forms.gettext(ddnSaveSlot))
 end
 
+function os.dir(dir)
+	local f = assert(io.popen("dir " .. dir, 'r'))
+	local s = f:read('*all')
+	f:close()
+
+	local matched = string.gmatch(s, "(%w+)%.%w+")
+
+	local files = {}
+	for file,k in matched do table.insert(files, tostring(file)) end
+	return files
+end
 
 local keymapfunc = require("2p1c\\setkeymap")
 local hostfunc = require("2p1c\\host")
@@ -327,11 +338,11 @@ lblPort = forms.label(form1, "Port:", 165, 95, 50, 20)
 txbLatency = forms.textbox(form1, "", 40, 20, "UNSIGNED", 230, 110, false, false)
 lblLatency = forms.label(form1, "Latency:", 227, 95, 50, 20)
 
-txbModifyInputs = forms.textbox(form1, "", 195, 20, nil, 10, 155, false, false)
+txbModifyInputs = forms.dropdown(form1, os.dir("2p1c\\InputModifier"), 10, 155, 195, 10)
 lblModifyInputs = forms.label(form1, "Input Modifier:", 15, 140, 130, 20)
 chkModifyInputs = forms.checkbox(form1, "Enable", 215, 154)
 
-txbInputDisplay = forms.textbox(form1, "", 195, 20, nil, 10, 200, false, false)
+txbInputDisplay = forms.dropdown(form1, os.dir("2p1c\\InputDisplay"), 10, 200, 195, 10)
 lblInputDisplay = forms.label(form1, "Input Display:", 15, 185, 130, 20)
 chkInputDisplay = forms.checkbox(form1, "Enable", 215, 199)
 
