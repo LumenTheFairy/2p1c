@@ -305,7 +305,7 @@ function os.dir(dir)
 	local s = f:read('*all')
 	f:close()
 
-	local matched = string.gmatch(s, "(%w+)%.%w+")
+	local matched = string.gmatch(s, "%s(%w+)%.%w+\n")
 
 	local files = {}
 	for file,k in matched do table.insert(files, tostring(file)) end
