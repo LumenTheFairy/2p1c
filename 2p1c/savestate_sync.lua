@@ -26,6 +26,9 @@ function savestate_sync.update_hash(slot)
   --construct the filename
   local romname = gameinfo.getromname()
   local systemname = emu.getsystemid()
+  if (systemname == "GB" or systemname == "GBC") then
+    systemname = "Gameboy"
+  end
   local filename = "./" .. systemname .. "/State/" .. romname .. ".QuickSave" .. slot .. ".State"
 
   --check if it exists
@@ -64,6 +67,9 @@ function savestate_sync.are_batteries_same(client_socket)
   --construct the filename
   local romname = gameinfo.getromname()
   local systemname = emu.getsystemid()
+  if (systemname == "GB" or systemname == "GBC") then
+    systemname = "Gameboy"
+  end
   local filename = "./" .. systemname .. "/SaveRAM/" .. romname .. ".SaveRAM"
 
   --check if it exists

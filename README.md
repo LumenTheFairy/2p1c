@@ -20,7 +20,7 @@ Place `mime/` and `socket/` in `BizHawkRoot/`, and place the *contents* of `lua/
 
 Next, the 2p1c distribution includes two important things: the main lua script `2p1c.lua` and a folder `2p1c/`. Place both of these in `BizHawkRoot/`.
 
-Finally, make sure that BizHawk is saving savestates and battery to the proper locations. For each console, savestates should be going into `BizHawkRoot/<system name>/State/`, and save battery should be going into `BizHawkRoot/<system name>/SaveRAM/` (these are the defaults.) To change this, load up BizHawk, and go to Config -> Paths...
+Finally, make sure that BizHawk is saving savestates and battery to the proper locations. For each console, savestates should be going into `BizHawkRoot/<system name>/State/`, and save battery should be going into `BizHawkRoot/<system name>/SaveRAM/` (these are the defaults.) To change this, load up BizHawk, and go to `Config -> Paths...`
 
 Once this is done, your directory structure should look like this:
 
@@ -61,23 +61,23 @@ Once this is done, your directory structure should look like this:
 
 There are a few configurations in BizHawk that must be properly set in order to avoid de-syncing. Open up EmuHawk and run the game you're interested in playing (in order to get the relevant config menus to be available.)
 
-* Config -> Controllers... While running 2p1c, the normal controllers are ignored, and input is read directly (you will set up the key mapping later.) For this reason, it does not matter what you have mapped on the Normal Controllers. On the other hand, accidentally pressing an autofire button is very likely to cause a de-sync while playing, and thus **it is extremely important that you unmap all Autofire Controls.** You can do this by clicking on on the Autofire Controls at the top, then selecting Misc... -> Clear at the bottom-right.
+* `Config -> Controllers...` While running 2p1c, the normal controllers are ignored, and input is read directly (you will set up the key mapping later.) For this reason, it does not matter what you have mapped on the Normal Controllers. On the other hand, accidentally pressing an autofire button is very likely to cause a de-sync while playing, and thus **it is extremely important that you unmap all Autofire Controls.** You can do this by clicking on on the Autofire Controls at the top, then selecting `Misc... -> Clear` at the bottom-right.
 
-* Config -> Hotkeys... It is recommended that you unmap any hotkeys you are likely to accidentally press. Reseting, loading a savestate, opening a different game, and the like through BizHawk menus or hotkeys while synced is almost certain to ruin the connection.
+* `Config -> Hotkeys...` It is recommended that you unmap any hotkeys you are likely to accidentally press. Reseting, loading a savestate, opening a different game, and the like through BizHawk menus or hotkeys while synced is almost certain to ruin the connection.
 
-* Config -> Paths... As mentioned above, make sure that BizHawk is saving savestates and battery to the proper locations for the console you are interested in playing.
+* `Config -> Paths...` As mentioned above, make sure that BizHawk is saving savestates and battery to the proper locations for the console you are interested in playing.
 
-* Config -> Rewind & States... When syncing and loading savestates, 2p1c does a sanity check to make sure both players' saves are the same. For this reason, it is important that both players' emulators are generating savestates the same way. Make sure the options under Savestate Options match for both players.
+* `Config -> Rewind & States...` When syncing and loading savestates, 2p1c does a sanity check to make sure both players' saves are the same. For this reason, it is important that both players' emulators are generating savestates the same way. Make sure the options under Savestate Options match for both players.
 
 ###2p1c Configuration
 
-Once you have everything else properly set up, you can run the 2p1c script to do some final setup before syncing and playing a game. To run the script in BizHawk, go to Tools -> Lua Console, and the Lua Console should open up. At this point, I suggest checking Settings -> Disable Script on Load and Settings -> Autoload. The former will allow you to choose when to start the script after opening it instead of it running automatically, and the latter will open the Lua Console automatically when you load EmuHawk.
+Once you have everything else properly set up, you can run the 2p1c script to do some final setup before syncing and playing a game. To run the script in BizHawk, go to `Tools -> Lua Console`, and the Lua Console should open up. At this point, I suggest checking `Settings -> Disable Script on Load` and `Settings -> Autoload`. The former will allow you to choose when to start the script after opening it instead of it running automatically, and the latter will open the Lua Console automatically when you load EmuHawk.
 
-Next, go to Script -> Open Script... and open `2p1c.lua` (it should be in `BizHawkRoot/`.) Make sure you are running a game, and then double click 2p1c (or click it and then press the green check mark) to run the script. The game may hang for a few seconds while the script is loading. Once it has finished loading, the game should reboot, savestate 0 should be created (or overridden,) and a new window will appear. The window has the following important configurations:
+Next, go to `Script -> Open Script...` and open `2p1c.lua` (it should be in `BizHawkRoot/`.) Make sure you are running a game, and then double click 2p1c (or click it and then press the green check mark) to run the script. The game may hang for a few seconds while the script is loading. Once it has finished loading, the game should reboot, savestate 0 should be created (or overridden,) and a new window will appear. The window has the following important configurations:
 
 * Set Controls: You will have to do this for each different console, and if you want to change your key mapping. Click Set Controls, and text will appear over the game prompting you to press which buttons you want to use (note this text is white, so pick a game with a dark title screen to do this.) If for some reason the keys are not mapping properly, you can try manually setting them by opening `BizHawkRoot/2p1c/Keymap/<system	name>.km` in a text editor.
 
-* Host IP and Port: The client should set the IP to the host's IP address, and both players must choose the same port number. The host will have to have port forwarding enabled on this port.
+* Host IP and Port: The client should set the IP to the host's IP address, and both players must choose the same port number. The host will have to have port forwarding enabled on this port, and will have to make sure their firewall is not blocking BizHawk. Google is your friend.
 
 * Latency: This is the delay, in frames, between when you press input, and when the input is registered by the game. This is also the amount of time, in frames, that it takes to send inputs between the players. Thus if the latency is too low, the game will run slowly while waiting for inputs from the other player, and if the latency is too high, there will be noticeable input delay. Finding the right medium is mostly trial and error, and will likely be different for different sets of players, but for a rough estimate, if the client pings the host and has max ping time `p` in ms, the latency should be around `(p / 1000) * fps * 1.5` rounded up to the next integer. Make sure this is set the same for both players.
 
@@ -130,7 +130,7 @@ Again, you can create your own input displays by looking into `BizHawkRoot/2p1c/
 
 ###Supported Systems
 
-2p1c currently supports NES, SNES, Gameboy, and GBA.
+2p1c currently supports NES, SNES, GB, GBC, and GBA.
 
 2p1c will only run on a Windows os (BizHawk does not have recent versions for other operating systems anyway.)
 
@@ -142,4 +142,4 @@ Credit to BizHawk, Lua, Luasocket, and kikito's sha1 script. Lua, luasocket, and
 
 ###Issues
 
-If you have any problems with the script (and restarting BizHawk does not fix them,) contact me ([@Modest_Ralts](https://twitter.com/Modest_ralts)) or TestRunner ([@Test_Runner](https://twitter.com/Test_Runner)) on Twitter. You can also submit an issue here on the GitHub, but we are much less likely to see them in a timely manner.
+If you have any problems with the script (and restarting BizHawk does not fix them,) contact me ([@Modest_Ralts](https://twitter.com/Modest_ralts)) or TestRunner ([@Test_Runner](https://twitter.com/Test_Runner)) on Twitter. You can also submit an issue here on the GitHub, but we are much less likely to see it in a timely manner.
