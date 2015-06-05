@@ -76,7 +76,7 @@ function savestate_sync.are_save0_same(client_socket)
       if (savestate_hashes[0] == their_save_hash) then
         return true
       else
-        return false, "Your init states do not match! Try restarting BizHawk."
+        return false, "Your init states do not match!\nTry restarting BizHawk with matching save batteries."
       end
     elseif  (received_message_type == messenger.LOAD_FAIL) then
       local their_reason = received_data[1]
