@@ -8,24 +8,24 @@ function sync.initialize()
   --attempt to load the desired input modifier. If it does not exist, load the
   --default modifier
   require_status, modify_inputs = pcall(function()
-    return dofile("2p1c\\Input Modifier\\" .. config.input_modifier .. ".im")
+    return dofile("2p1c\\InputModifier\\" .. config.input_modifier .. ".im")
   end)
   if not require_status then
     printOutput("The input modifier specified in config.lua could not be found.")
     printOutput("Loading the default input modifier instead.")
     config.input_modifier = "none"
-    modify_inputs = dofile("2p1c\\Input Modifier\\none.im")
+    modify_inputs = dofile("2p1c\\InputModifier\\none.im")
   end
   --attempt to load the desired input display. If it does not exist, load the
   --default display
   require_status, display_inputs = pcall(function()
-    return dofile("2p1c\\Input Display\\" .. config.input_display .. ".im")
+    return dofile("2p1c\\InputDisplay\\" .. config.input_display .. ".im")
   end)
   if not require_status then
     printOutput("The input diplay specified in config.lua could not be found.")
     printOutput("Loading the default input diplay instead.")
     config.input_display = "none"
-    display_inputs = dofile("2p1c\\Input Display\\none.im")
+    display_inputs = dofile("2p1c\\InputDisplay\\none.im")
   end
 end
 
