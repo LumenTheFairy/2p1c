@@ -1,3 +1,4 @@
+client.unpause()
 if (gameinfo.getromname() == "Null") then
 	print("Load a rom first.")
 	return
