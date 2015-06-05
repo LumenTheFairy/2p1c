@@ -1,0 +1,7 @@
+--This file contains the controller key mappings.
+--This file is set by clicking 'Set Controls' when running 2p1c
+--or it can be manually edited - the names of keys can be found at
+-- http://www.codeproject.com/Tips/73227/Keys-Enumeration-Win
+local keymap = {}
+
+return keymap

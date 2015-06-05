@@ -2,7 +2,7 @@
 --author: TheOnlyOne
 local messenger = {}
 
-controller = require("controller")
+controller = require("2p1c\\controller")
 
 --list of message types
 messenger.INPUT = 0
@@ -47,7 +47,7 @@ local encode_message = {
     local my_input = data[1]
     local frame = data[2]
     --convert pressed buttons to a binary string
-    message = ""
+    local message = ""
     for i, b in pairs(controller.buttons) do
       if (my_input[b] == true) then
         message = message .. "1"
@@ -105,11 +105,12 @@ local encode_message = {
     return message .. "," .. frame
   end,
 
-  --a save hash message expects 1 argument:
-  --the save hash number
+  --a save hash message expects 2 arguments:
+  --the savestate slot number and the save hash number
   [messenger.SAVE_HASH] = function(data)
-    local save_hash = data[1]
-    return save_hash
+    local slot = data[1]
+    local save_hash = data[2]
+    return slot .. "," .. save_hash
   end,
 
   --a load fail message expects 1 argument:
@@ -119,11 +120,12 @@ local encode_message = {
     return reason
   end,
 
-  --a load message expects 1 argument:
-  --the slot that should be loaded
+  --a load message expects 2 arguments:
+  --the slot that should be loaded and the frame to send the hash
   [messenger.LOAD] = function(data)
     local slot = data[1]
-    return "" .. slot
+    local future_frame = data[2]
+    return slot .. "," .. future_frame
   end,
 
   --a load message expects 2 arguments:
@@ -190,7 +192,7 @@ local decode_message = {
 
   [messenger.PAUSE] = function(split_message)
     --get pause state from the message
-    local their_pause_state = split_message[0]
+    local their_pause_state = tonumber(split_message[0])
     return {their_pause_state}
   end,
 
@@ -217,8 +219,9 @@ local decode_message = {
 
   [messenger.SAVE_HASH] = function(split_message)
     --get save hash from message
-    local their_save_hash = split_message[0]
-    return {their_save_hash}
+    local slot = tonumber(split_message[0])
+    local their_save_hash = split_message[1]
+    return {slot, their_save_hash}
   end,
 
   [messenger.LOAD_FAIL] = function(split_message)
@@ -231,7 +234,8 @@ local decode_message = {
     --get slot from message
     local slot_message = split_message[0]
     local their_slot = tonumber(slot_message)
-    return {their_slot}
+    local future_frame = tonumber(split_message[1])
+    return {their_slot, future_frame}
   end,
 
   [messenger.SAVE] = function(split_message)
@@ -247,12 +251,33 @@ local decode_message = {
 
 --recieves a message from the other client, returning the message type
 --along with a table containing the message type-specific information
---this will block as long as the socket will, and will throw an error on timeout
-function messenger.receive(client_socket)
+--if nonblocking not set then this will block until a message is received
+--or timeouts. Otheriwse it will return nil if no message is receive.
+function messenger.receive(client_socket, nonblocking)
+  if nonblocking then
+    client_socket:settimeout(0)
+  end
+
   --get the next message
-  message = client_socket:receive()
+  local message, err = client_socket:receive()
+
+  if nonblocking then
+    client_socket:settimeout(config.input_timeout)
+  end
+
   if(message == nil) then
-    error("Timed out waiting for a message from the other player (the other player may have disconnected.)")
+    if err == "timeout" then
+      if not nonblocking then 
+        error("Timed out waiting for a message from the other player (the other player may have disconnected.)")
+      else
+        return nil
+      end
+    elseif err == "closed" then
+      error("Other player closed the connection.")
+    else
+      error("Unexpected error.")
+    end
+
   end
   --determine message type
   local message_type = char_to_message_type[message:sub(1,1)]
