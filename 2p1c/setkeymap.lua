@@ -55,7 +55,7 @@ return function()
 	local output = ""
 	output = output
 	.. "--This file contains the controller key mappings.\n"
-	.. "--This file can be set appropriately by running setkeymap.lua,\n"
+	.. "--This file is set by clicking 'Set Controls' when running 2p1c,\n"
 	.. "--or it can be manually edited - the names of keys can be found at\n"
 	.. "-- http://www.codeproject.com/Tips/73227/Keys-Enumeration-Win\n"
 	.. "local keymap = {\n"
