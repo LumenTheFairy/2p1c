@@ -19,13 +19,13 @@ function sync.initialize()
   --attempt to load the desired input display. If it does not exist, load the
   --default display
   require_status, display_inputs = pcall(function()
-    return dofile("2p1c\\InputDisplay\\" .. config.input_display .. ".im")
+    return dofile("2p1c\\InputDisplay\\" .. config.input_display .. ".id")
   end)
   if not require_status then
     printOutput("The input diplay specified in config.lua could not be found.")
     printOutput("Loading the default input diplay instead.")
     config.input_display = "none"
-    display_inputs = dofile("2p1c\\InputDisplay\\none.im")
+    display_inputs = dofile("2p1c\\InputDisplay\\none.id")
   end
 end
 
