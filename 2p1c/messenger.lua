@@ -251,7 +251,8 @@ local decode_message = {
 
 --recieves a message from the other client, returning the message type
 --along with a table containing the message type-specific information
---this will block as long as the socket will, and will throw an error on timeout
+--if nonblocking not set then this will block until a message is received
+--or timeouts. Otheriwse it will return nil if no message is receive.
 function messenger.receive(client_socket, nonblocking)
   if nonblocking then
     client_socket:settimeout(0)

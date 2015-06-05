@@ -6,6 +6,7 @@ return function()
 	local keymap = {}
 	local keylist = controller.buttons
 
+	--Returns key pressed in keys table
 	function getKey(t)
 		local key = nil
 		for k, v in pairs(t) do
@@ -21,11 +22,13 @@ return function()
 		return key
 	end
 
+	--Prompt and wait for key press. Returns the key pressed
 	function getInput(val)
 		local timeout = 300
 		local keyPress
 		local key
 
+		--Wait for key press
 	    repeat
 	    	gui.text(client.bufferheight() / 2, (client.bufferwidth() / 2),"Enter a key for " ..val)
 	    	keyPress = input.get()
@@ -38,6 +41,7 @@ return function()
 	    	coroutine.yield()
 	    until (key ~= nil)
 
+	    --Wait for key release
 	    repeat
 	    	gui.text(client.bufferheight() / 2, (client.bufferwidth() / 2),"Enter a key for " ..val)
 	    	keyPress = input.get()
@@ -48,10 +52,12 @@ return function()
 		keymap[key] = val
 	end
 
+	--Prompt for all keys in the keylist
 	for k, v in ipairs(keylist) do
 		getInput(v)
 	end
 
+	--Create keymap file
 	local output = ""
 	output = output
 	.. "--This file contains the controller key mappings.\n"

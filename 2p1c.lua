@@ -1,9 +1,15 @@
+--This is the main script file for 2p1c. 
+--This interfaces with the UI form and runs the main loop
+--author: Testrunner
+
+--Make sure a rom is loaded
 client.unpause()
 if (gameinfo.getromname() == "Null") then
 	print("Load a rom first.")
 	return
 end
 
+--Create savestate0 which is at frame 0
 if (emu.framecount() ~= 1) then
 	client.reboot_core()
 	savestate.saveslot(0)
@@ -22,6 +28,7 @@ local btnSaveSlot, btnLoadSlot, ddnSaveSlot, lblSaveSlot
 local btnSaveConfig, btnLoadConfig
 config = {}
 
+--Reloads the config file, overwriting any changes made
 function loadConfig()
 	config = dofile("2p1c\\config")
 	config.input_display_enabled = true
@@ -30,6 +37,8 @@ function loadConfig()
 	updateGUI()
 end
 
+--Saves the config file.
+--dontRead flag will prevent reading changes made in the form
 function saveConfig(dontRead)
 	if (dontRead == nil) then
 		config.hostname = forms.gettext(txbIP)
@@ -85,9 +94,11 @@ return config
 	f:close()
 end
 
+--Attempt to load config file
 require_status, config = pcall(function()
 	return dofile("2p1c\\config")
 end)
+--If config file not found, then create a default config file
 if not require_status then
 	config = {}
 	config.player = 1
@@ -106,11 +117,13 @@ config.modify_inputs_enabled = true
 config.accept_timeout = 10
 config.input_timeout = 10
 
+--stringList contains the output text
 local stringList = {last = 1, first = 24}
 for i = stringList.first, stringList.last, -1 do
 	stringList[i] = ""
 end
 
+--add a new line to the string list
 function stringList.push(value)
   stringList.first = stringList.first + 1
   stringList[stringList.first] = value
@@ -118,6 +131,7 @@ function stringList.push(value)
   stringList.last = stringList.last + 1
 end
 
+--get the entire string list as a single string
 function stringList.tostring()
 	local outputstr = ""
 	for i = stringList.first, stringList.last, -1 do
@@ -127,7 +141,7 @@ function stringList.tostring()
 	return outputstr
 end
 
-
+--Add a line to the output. Inserts a timestamp to the string
 function printOutput(str) 
 	str = string.gsub (str, "\n", "\r\n")
 	str = "[" .. os.date("%H:%M:%S", os.time()) .. "] " .. str
@@ -136,6 +150,7 @@ function printOutput(str)
 	forms.settext(text1, stringList.tostring())
 end
 
+--Reloads all the info on the form. Disables any inappropriate components
 function updateGUI()
 	forms.settext(txbIP, config.hostname)
 	forms.settext(txbPort, config.port)
@@ -204,6 +219,7 @@ function updateGUI()
 	end
 end
 
+--Clears pointers when the connection is closed
 function cleanConnection()
 	syncStatus = "Idle"
 	client_socket = nil
@@ -224,6 +240,7 @@ function close_connection()
   cleanConnection()
 end
 
+--If the script ends, makes sure the sockets and form are closed
 event.onexit(function () close_connection(); forms.destroy(form1) end)
 
 --furthermore, override error with a function that closes the connection
@@ -235,6 +252,7 @@ error = function(str, level)
   old_error(str, 0)
 end
 
+--Toggle player click handle for player 1 checkbox
 function changePlayer1()
 	if config.player == 1 then
 		config.player = 2
@@ -245,6 +263,7 @@ function changePlayer1()
 	end
 end
 
+--Toggle player click handle for player 2 checkbox
 function changePlayer2()
 	if config.player == 1 then
 		config.player = 2
@@ -255,11 +274,13 @@ function changePlayer2()
 	end
 end
 
+--Toggle input display click handle for the checkbox
 function toggleInputDisplay()
 	config.input_display = forms.gettext(txbInputDisplay)
 	config.input_display_enabled = not config.input_display_enabled
 end
 
+--Load the changes from the form and disable any appropriate components
 function prepareConnection()
 	config.hostname = forms.gettext(txbIP)
 	config.port = tonumber(forms.gettext(txbPort))
@@ -279,6 +300,7 @@ function prepareConnection()
 	forms.setproperty(btnPause, "Enabled", true)
 end
 
+--Toggle pause click handle for the pause button
 function togglePause()
 	if syncStatus == "Play" then
 		sendMessage["Pause"] = true
@@ -289,6 +311,7 @@ function togglePause()
 	end
 end
 
+--Quit/Disconnect click handle for the quit button
 function quit2P1C()
 	if syncStatus == "Idle" then
 		forms.destroy(form1)
@@ -297,10 +320,7 @@ function quit2P1C()
 	end
 end
 
-function saveSlot()
-	sendMessage["Save"] = tonumber(forms.gettext(ddnSaveSlot))
-end
-
+--Returns a list of files in a given directory
 function os.dir(dir)
 	local f = assert(io.popen("dir " .. dir, 'r'))
 	local s = f:read('*all')
@@ -317,7 +337,7 @@ local keymapfunc = require("2p1c\\setkeymap")
 local hostfunc = require("2p1c\\host")
 local clientfunc = require("2p1c\\client")
 
-
+--Create the form
 form1 = forms.newform(580, 390, "2p1c")
 forms.setproperty(form1, "ControlBox", false)
 
@@ -368,9 +388,6 @@ btnLoadConfig = forms.button(form1, "Discard Changes", function() guiClick["Disc
 
 
 
-event.onexit(function() forms.destroy(form1) end)
-
-
 sendMessage = {}
 syncStatus = "Idle"
 local prev_syncStatus = "Idle"
@@ -383,22 +400,29 @@ updateGUI()
 
 local threads = {}
 
+---------------------
+--    Main loop    --
+---------------------
 while 1 do
+	--End script if form is closed
 	if forms.gettext(form1) == "" then
 		return
 	end
 
+	--Update form if state has changed
 	if (prev_syncStatus ~= syncStatus or prev_modify_inputs_enabled ~= config.modify_inputs_enabled) then
 		prev_syncStatus = syncStatus
 		prev_modify_inputs_enabled = config.modify_inputs_enabled
 		updateGUI()
 	end
 
+	--Create threads for the function requests from the form
 	for k,v in pairs(guiClick) do
 		threads[coroutine.create(v)] = k
 	end
 	guiClick = {}
 
+	--Run the threads
 	for k,v in pairs(threads) do
 		if coroutine.status(k) == "dead" then
 			threads[k] = nil
@@ -414,7 +438,9 @@ while 1 do
 		end
 	end
 
+	--If connected, run the syncinputs thread
 	if syncStatus ~= "Idle" then
+		--If the thread didn't yield, then create a new one
 		if thread == nil or coroutine.status(thread) == "dead" then
 			thread = coroutine.create(sync.syncallinput)
 		end
@@ -426,6 +452,7 @@ while 1 do
 	end
 
 	-- 2 Emu Yields = 1 Frame Advance
+	--If game is paused, then yield will not frame advance
 	emu.yield()
 	emu.yield()
 
