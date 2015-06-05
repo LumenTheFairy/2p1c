@@ -343,8 +343,9 @@ function sync.syncallinput(client_socket)
     elseif (received_message_type == messenger.SAVE) then
       save_queue[received_data[2]] = received_data[1]
 
-      sync.unpause("The other player")
-      return
+      if sync.unpause("The other player") then
+        return
+      end
     elseif (received_message_type == nil) then
       timeout_frames = timeout_frames + 1
 
