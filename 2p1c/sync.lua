@@ -42,7 +42,7 @@ function sync.syncconfig(client_socket, default_player)
   --construct a value representing the input modifier that is in use
   local sha1 = require("2p1c\\sha1")
   local modifier_text = ""
-  for line in io.lines("2p1c\\" .. config.input_modifier) do modifier_text = modifier_text .. line .. "\n" end
+  for line in io.lines("2p1c\\InputModifier\\" .. config.input_modifier .. ".im") do modifier_text = modifier_text .. line .. "\n" end
   local modifier_hash = sha1.sha1(modifier_text)
 
   --construct a value representing the sync code that is in use
