@@ -2,7 +2,22 @@
 --author: TheOnlyOne and TestRunner
 local sync = {}
 
-local require_status, modify_inputs, display_inputs
+local require_status, modify_inputs
+display_inputs = nil
+
+function sync.load_input_display()
+  --attempt to load the desired input display. If it does not exist, load the
+  --default display
+  require_status, display_inputs = pcall(function()
+    return dofile("2p1c\\InputDisplay\\" .. config.input_display .. ".id")
+  end)
+  if not require_status then
+    printOutput("The input diplay specified in config.lua could not be found.")
+    printOutput("Loading the default input diplay instead.")
+    config.input_display = "none"
+    display_inputs = dofile("2p1c\\InputDisplay\\none.id")
+  end
+end
 
 --Load required files before attempting to sync
 function sync.initialize() 
@@ -16,17 +31,6 @@ function sync.initialize()
     printOutput("Loading the default input modifier instead.")
     config.input_modifier = "none"
     modify_inputs = dofile("2p1c\\InputModifier\\none.im")
-  end
-  --attempt to load the desired input display. If it does not exist, load the
-  --default display
-  require_status, display_inputs = pcall(function()
-    return dofile("2p1c\\InputDisplay\\" .. config.input_display .. ".id")
-  end)
-  if not require_status then
-    printOutput("The input diplay specified in config.lua could not be found.")
-    printOutput("Loading the default input diplay instead.")
-    config.input_display = "none"
-    display_inputs = dofile("2p1c\\InputDisplay\\none.id")
   end
 end
 
@@ -131,7 +135,9 @@ local pause_queue = {}
 local current_input, received_input
 local received_message_type, received_data
 local received_frame
-local my_input, their_input, final_input
+my_input = {}
+their_input = {}
+local final_input
 local current_frame, future_frame, timeout_frames
 
 local controller = require("2p1c\\controller")
@@ -403,11 +409,6 @@ function sync.syncallinput(client_socket)
   --Modify inputs if enabled
   if (config.modify_inputs_enabled) then
     my_input, their_input = modify_inputs(my_input, their_input, config.player)
-  end
-
-  --Display inputs if enabled
-  if config.input_display_enabled then
-    display_inputs(my_input, their_input, config.player)
   end
 
   --Merge both plays inputs

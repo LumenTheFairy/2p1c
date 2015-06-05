@@ -187,7 +187,6 @@ function updateGUI()
 		forms.setproperty(txbPort, "Enabled", true)
 		forms.setproperty(txbLatency, "Enabled", true)
 		forms.setproperty(txbModifyInputs, "Enabled", true)
-		forms.setproperty(txbInputDisplay, "Enabled", true)
 		forms.setproperty(chkPlayer1, "Enabled", true)
 		forms.setproperty(chkPlayer2, "Enabled", true)
 		forms.setproperty(btnHost, "Enabled", true)
@@ -205,7 +204,6 @@ function updateGUI()
 		forms.setproperty(txbPort, "Enabled", false)
 		forms.setproperty(txbLatency, "Enabled", false)
 		forms.setproperty(txbModifyInputs, "Enabled", false)
-		forms.setproperty(txbInputDisplay, "Enabled", false)
 		forms.setproperty(chkPlayer1, "Enabled", false)
 		forms.setproperty(chkPlayer2, "Enabled", false)
 		forms.setproperty(btnHost, "Enabled", false)
@@ -294,7 +292,6 @@ function prepareConnection()
 	forms.setproperty(txbPort, "Enabled", false)
 	forms.setproperty(txbLatency, "Enabled", false)
 	forms.setproperty(txbModifyInputs, "Enabled", false)
-	forms.setproperty(txbInputDisplay, "Enabled", false)
 	forms.setproperty(chkPlayer1, "Enabled", false)
 	forms.setproperty(chkPlayer2, "Enabled", false)
 	forms.setproperty(btnHost, "Enabled", false)
@@ -395,6 +392,7 @@ sendMessage = {}
 syncStatus = "Idle"
 local prev_syncStatus = "Idle"
 local prev_modify_inputs_enabled = true
+local prev_input_display = ""
 client_socket = nil
 server = nil
 local thread
@@ -417,6 +415,14 @@ while 1 do
 		prev_syncStatus = syncStatus
 		prev_modify_inputs_enabled = config.modify_inputs_enabled
 		updateGUI()
+	end
+
+	--Load Input Display if changed
+	if (prev_input_display ~= forms.gettext(txbInputDisplay)) then
+		prev_input_display = forms.gettext(txbInputDisplay)
+		config.input_display = prev_input_display
+
+		sync.load_input_display()
 	end
 
 	--Create threads for the function requests from the form
@@ -456,7 +462,17 @@ while 1 do
 
 	-- 2 Emu Yields = 1 Frame Advance
 	--If game is paused, then yield will not frame advance
+
+  	--Display inputs if enabled
+	if config.input_display_enabled and display_inputs ~= nil then
+		display_inputs(my_input, their_input, config.player)
+	end
 	emu.yield()
+
+	--Display inputs if enabled
+	if config.input_display_enabled and display_inputs ~= nil then
+		display_inputs(my_input, their_input, config.player)
+	end
 	emu.yield()
 
 	--clear all input so that actual inputs do not interfere
