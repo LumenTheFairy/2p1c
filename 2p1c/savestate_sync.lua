@@ -1,6 +1,6 @@
 --Makes sure that save state loads are synced properly,
 --and can rewind to a synced backup save in case of desync
---author: TheOnlyOne
+--author: TheOnlyOne and TestRunner
 local savestate_sync = {}
 
 local messenger = require("2p1c\\messenger")
@@ -44,10 +44,12 @@ function savestate_sync.update_hash(slot)
   end
 end
 
+--Create the hashes for all the savestate slots
 for i = 0,9 do
   savestate_sync.update_hash(i)
 end
 
+--Create the onsavestate handle to update the hash
 event.onsavestate(function (savefile)
   local savematch = string.match(savefile, "QuickSave(%d)")
 
@@ -74,7 +76,7 @@ function savestate_sync.are_batteries_same(client_socket)
 
   --check if it exists
   if (file_exists(filename)) then
-    --construct a value that represents the save state
+    --construct a value that represents the battery
     local save_text = ""
     for line in io.lines(filename) do save_text = save_text .. line .. "\n" end
 
@@ -106,6 +108,7 @@ function savestate_sync.are_batteries_same(client_socket)
     local received_message_type, received_data = messenger.receive(client_socket)
     if (received_message_type == messenger.SAVE_HASH) then
       return false, reason
+    --Load anyways if you are both missing the save battery
     elseif  (received_message_type == messenger.LOAD_FAIL) then
       local their_reason = received_data[1]
       if (their_reason == "Could not find save battery.") then
