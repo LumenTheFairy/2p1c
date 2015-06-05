@@ -111,7 +111,7 @@ end
 --loads slot 0, this should be a savestate at frame 0
 --such a savestate should be generated on script load
 function sync.synctoframe1(client_socket)
-  local status, err = savestate_sync.are_batteries_same(client_socket)
+  local status, err = savestate_sync.are_save0_same(client_socket)
   if (not status) then
     error("Failed to sync.\n" .. err)
   end
