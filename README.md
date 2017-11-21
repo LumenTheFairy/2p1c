@@ -1,17 +1,17 @@
-#2 Players, 1 Controller
+# 2 Players, 1 Controller
 
 2p1c is a Lua script for BizHawk that allows two people to play the same game at the same time over the network.
 
-##Setup
+## Setup
 
-###You will need the following:
+### You will need the following:
 
 * (1) [BizHawk 1.9.4](http://sourceforge.net/projects/bizhawk/files/BizHawk/BizHawk-1.9.4.zip/download)
 * (2) [BizHawk prerequisite installer](http://sourceforge.net/projects/bizhawk/files/Prerequisites/bizhawk_prereqs_v1.1.zip/download) (run this)
 * (3) [luasocket](http://files.luaforge.net/releases/luasocket/luasocket/luasocket-2.0.2/luasocket-2.0.2-lua-5.1.2-Win32-vc8.zip)
 * (4) [2p1c](https://github.com/LumenTheFairy/2p1c/releases)
 
-###Directory structure
+### Directory structure
 
 The locations of files is very important! Make sure to put them in the right place. After unzipping BizHawk (1), you should be able to find the executable `EmuHawk.exe`, we will call the folder containing it `BizHawkRoot/`.
 
@@ -49,7 +49,7 @@ Once this is done, your directory structure should look like this:
       ...
 ```
 
-###BizHawk Configuration
+### BizHawk Configuration
 
 There are a few configurations in BizHawk that must be properly set in order to avoid de-syncing. Open up EmuHawk and run the game you're interested in playing (in order to get the relevant config menus to be available.)
 
@@ -61,7 +61,7 @@ There are a few configurations in BizHawk that must be properly set in order to 
 
 * `Config -> Rewind & States...` When syncing and loading savestates, 2p1c does a sanity check to make sure both players' saves are the same. For this reason, it is important that both players' emulators are generating savestates the same way. Make sure the options under Savestate Options match for both players.
 
-###2p1c Configuration
+### 2p1c Configuration
 
 Once you have everything else properly set up, you can run the 2p1c script to do some final setup before syncing and playing a game. To run the script in BizHawk, go to `Tools -> Lua Console`, and the Lua Console should open up. At this point, I suggest checking `Settings -> Disable Script on Load` and `Settings -> Autoload`. The former will allow you to choose when to start the script after opening it instead of it running automatically, and the latter will open the Lua Console automatically when you load EmuHawk.
 
@@ -80,7 +80,7 @@ Next, go to `Script -> Open Script...` and open `2p1c.lua` (it should be in `Biz
 Make sure to click Save Settings, and you should be ready to play!
 
 
-##Syncing with 2p1c
+## Syncing with 2p1c
 
 Once you have completed setup and chosen a game to play, you can run the 2p1c script from the Lua Console. Make sure before running the script that both players have the same save battery. The easiest way to do this is to just delete the saves, or one player can send a save to the other. If you synced and played before, and have not played independently since, the saves should still be the same in this case as well.
 
@@ -94,7 +94,7 @@ After both players have the 2p1c window up, the host clicks Host to host, and th
 
 * Close Connection: Click this to cleanly close down the connection. Closing the Lua Console or BizHawk directly can result in issues reconnecting for some time, and may cause the other player to hang.
 
-###Input Modifiers
+### Input Modifiers
 
 Input modifiers are functions that change the input that the players pressed before it is sent to the game. This allows, for example, for some inputs to be disabled for each player, as would be the case in an in-person 2 players, 1 controller experience. The input modifiers that currently come with 2p1c are as follows:
 
@@ -108,7 +108,7 @@ If an input modifier is getting in the way of how you want to play, or is acting
 
 You can create your own input modifiers as well, or edit the existing ones. If you wish to do so, look into `BizHawkRoot/2p1c/InputModifier/` and use the files there as a template (they are simply Lua scripts that return a function, despite their extensions.) Just make sure that both players have identical input modifiers, or else the games will not sync.
 
-###Input Displays
+### Input Displays
 
 If you want an input display other that BizHawk's default display, you can use one of these. 2p1c input displays give more information that the default display because they can tell which player pressed which buttons. The input displays that currently come with 2p1c are as follows:
 
@@ -118,20 +118,20 @@ If you want an input display other that BizHawk's default display, you can use o
 
 Again, you can create your own input displays by looking into `BizHawkRoot/2p1c/InputDisplay/` and using the files there as a template. Each player can use whatever input display they like, and they can be enabled and disabled independently. 
 
-##Misc
+## Misc
 
-###Supported Systems
+### Supported Systems
 
 2p1c currently supports NES, SNES, GB, GBC, and GBA.
 
 2p1c will only run on a Windows os (BizHawk does not have recent versions for other operating systems anyway.)
 
-###Credits
+### Credits
 
 Created by TheOnlyOne and TestRunner.
 
 Credit to BizHawk, Lua, Luasocket, and kikito's sha1 script. Lua, luasocket, and sha1.lua all fall under the MIT license.
 
-###Issues
+### Issues
 
 If you have any problems with the script (and restarting BizHawk does not fix them,) contact me ([@Modest_Ralts](https://twitter.com/Modest_ralts)) or TestRunner ([@Test_Runner](https://twitter.com/Test_Runner)) on Twitter. You can also submit an issue here on the GitHub, but we are much less likely to see it in a timely manner.
